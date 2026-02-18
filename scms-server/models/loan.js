@@ -1,0 +1,124 @@
+const { DataTypes } = require('sequelize');
+
+module.exports = (sequelize) => {
+    const Loan = sequelize.define('Loan', {
+        id: {
+            type: DataTypes.INTEGER,
+            primaryKey: true,
+            autoIncrement: true
+        },
+        userId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+                model: 'Users',
+                key: 'id'
+            }
+        },
+        loanAmount: {
+            type: DataTypes.DECIMAL(15, 2),
+            allowNull: false
+        },
+        interestRate: {
+            type: DataTypes.DECIMAL(5, 2),
+            allowNull: false,
+            comment: 'Annual interest rate in percentage'
+        },
+        duration: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            comment: 'Loan duration in months'
+        },
+        monthlyPayment: {
+            type: DataTypes.DECIMAL(15, 2),
+            allowNull: false
+        },
+        totalRepayable: {
+            type: DataTypes.DECIMAL(15, 2),
+            allowNull: false
+        },
+        outstandingBalance: {
+            type: DataTypes.DECIMAL(15, 2),
+            allowNull: false
+        },
+        status: {
+            type: DataTypes.ENUM('pending', 'approved', 'disbursed', 'repaying', 'completed', 'defaulted', 'rejected'),
+            defaultValue: 'pending'
+        },
+        approvedBy: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'Users',
+                key: 'id'
+            }
+        },
+        disbursedAt: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        nextPaymentDate: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        paystackTransferRecipient: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        disbursementReference: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        bankName: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        accountNumber: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        repaymentMode: {
+            type: DataTypes.ENUM('manual', 'automated'),
+            defaultValue: 'manual',
+            allowNull: false
+        },
+        monthlyDeductionAmount: {
+            type: DataTypes.DECIMAL(15, 2),
+            allowNull: true
+        },
+        dueDate: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        originalDueDate: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        lastDeductionDate: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        failedDeductionCount: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0,
+            allowNull: false
+        },
+        extensionCount: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0,
+            allowNull: false
+        }
+    }, {
+        tableName: 'Loans',
+        timestamps: true
+    });
+
+    Loan.associate = (models) => {
+        Loan.belongsTo(models.User, { foreignKey: 'userId', as: 'borrower' });
+        Loan.belongsTo(models.User, { foreignKey: 'approvedBy', as: 'approver' });
+        Loan.hasMany(models.LoanRepayment, { foreignKey: 'loanId', as: 'repayments' });
+        Loan.hasMany(models.LoanGuarantor, { foreignKey: 'loanId', as: 'guarantors' });
+    };
+
+    return Loan;
+};

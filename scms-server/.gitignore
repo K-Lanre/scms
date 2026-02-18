@@ -1,0 +1,5 @@
+node_modules/
+.env
+*.log
+test_out.txt
+test_error_details.json
