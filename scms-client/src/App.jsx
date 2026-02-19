@@ -5,52 +5,60 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import MainLayout from "./layouts/MainLayout";
 import AuthLayout from "./layouts/AuthLayout";
-import PrivateRoute from "./components/common/PrivateRoute";
+import PrivateRoute from "./shared/components/common/PrivateRoute";
 
 // Import pages
-import Login from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
-import ForgotPassword from "./pages/auth/ForgotPassword";
-import UserProfile from "./pages/auth/UserProfile";
+import Login from "./features/auth/pages/Login";
+import Register from "./features/auth/pages/Register";
+import ForgotPassword from "./features/auth/pages/ForgotPassword";
+import UserProfile from "./features/auth/pages/UserProfile";
+import ResetPassword from "./features/auth/pages/ResetPassword";
 
-import Dashboard from "./pages/dashboard/Dashboard";
-import Messages from "./pages/dashboard/Messages";
-import Support from "./pages/dashboard/Support";
+import Dashboard from "./features/dashboard/pages/Dashboard";
+import Messages from "./features/dashboard/pages/Messages";
+import Support from "./features/dashboard/pages/Support";
 
-import MemberDirectory from "./pages/members/MemberDirectory";
-import MemberRegistration from "./pages/members/MemberRegistration";
-import MemberProfile from "./pages/members/MemberProfile";
-import SavingsOverview from "./pages/savings/SavingsOverview";
-import SavingsOperations from "./pages/savings/SavingsOperations";
-import SavingsProducts from "./pages/savings/SavingsProducts";
-import LoanApplication from "./pages/loans/LoanApplication";
-import LoanPortfolio from "./pages/loans/LoanPortfolio";
-import LoanRequests from "./pages/loans/LoanRequests";
-import LoanRepayment from "./pages/loans/LoanRepayment";
-import TransactionHistory from "./pages/transactions/TransactionHistory";
-import TransactionEntry from "./pages/transactions/TransactionEntry";
-import FinancialReports from "./pages/reports/FinancialReports";
-import UserManagement from "./pages/admin/UserManagement";
-import SystemSettings from "./pages/admin/SystemSettings";
-import AuditLogs from "./pages/admin/AuditLogs";
-import RegistrationQueue from "./pages/admin/RegistrationQueue";
-import ChartOfAccounts from "./pages/admin/ChartOfAccounts";
-import InterestPosting from "./pages/admin/InterestPosting";
-import TemplateManager from "./pages/admin/TemplateManager";
+import MemberDirectory from "./features/members/pages/MemberDirectory";
+import MemberRegistration from "./features/members/pages/MemberRegistration";
+import MemberProfile from "./features/members/pages/MemberProfile";
+import SavingsOverview from "./features/savings/pages/SavingsOverview";
+import SavingsOperations from "./features/savings/pages/SavingsOperations";
+import SavingsProducts from "./features/savings/pages/SavingsProducts";
+import LoanApplication from "./features/loans/pages/LoanApplication";
+import LoanPortfolio from "./features/loans/pages/LoanPortfolio";
+import LoanRequests from "./features/loans/pages/LoanRequests";
+import LoanRepayment from "./features/loans/pages/LoanRepayment";
+import TransactionHistory from "./features/transactions/pages/TransactionHistory";
+import TransactionEntry from "./features/transactions/pages/TransactionEntry";
+import FinancialReports from "./features/reports/pages/FinancialReports";
+import UserManagement from "./features/admin/pages/UserManagement";
+import SystemSettings from "./features/admin/pages/SystemSettings";
+import AuditLogs from "./features/admin/pages/AuditLogs";
+import RegistrationQueue from "./features/admin/pages/RegistrationQueue";
+import ChartOfAccounts from "./features/admin/pages/ChartOfAccounts";
+import InterestPosting from "./features/admin/pages/InterestPosting";
+import TemplateManager from "./features/admin/pages/TemplateManager";
+import WithdrawalQueue from "./features/admin/pages/WithdrawalQueue";
+import LoanDisbursement from "./features/admin/pages/LoanDisbursement";
+import LoanRepaymentLedger from "./features/loans/pages/LoanRepaymentLedger";
+import InterAccountTransfer from "./features/transactions/pages/InterAccountTransfer";
 
-import WithdrawalRequest from "./pages/savings/WithdrawalRequest";
-import LoanCalculator from "./pages/loans/LoanCalculator";
-import LoanAppraisal from "./pages/loans/LoanAppraisal";
-import CollateralRegistry from "./pages/loans/CollateralRegistry";
-import FinancialStatements from "./pages/reports/FinancialStatements";
-import LandingPage from "./pages/landing/LandingPage"; // New import
-import NotFound from "./pages/NotFound";
+import WithdrawalRequest from "./features/savings/pages/WithdrawalRequest";
+import LoanCalculator from "./features/loans/pages/LoanCalculator";
+import LoanAppraisal from "./features/loans/pages/LoanAppraisal";
+import CollateralRegistry from "./features/loans/pages/CollateralRegistry";
+import FinancialStatements from "./features/reports/pages/FinancialStatements";
+import LandingPage from "./features/landing/pages/LandingPage";
+import NotFound from "./features/NotFound";
+
+import { useAuth } from "./features/auth/hooks/useAuth";
 
 const AppRoutes = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) return null; // Or a loading spinner
 
   return (
     <Routes>
@@ -69,6 +77,7 @@ const AppRoutes = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
       </Route>
 
       {/* Protected Routes */}
@@ -99,9 +108,14 @@ const AppRoutes = () => {
           <Route path="/loans/calculator" element={<LoanCalculator />} />
           <Route path="/loans/appraisal" element={<LoanAppraisal />} />
           <Route path="/loans/collateral" element={<CollateralRegistry />} />
+          <Route path="/loans/:id/ledger" element={<LoanRepaymentLedger />} />
 
           {/* Transaction Routes */}
           <Route path="/transactions" element={<TransactionHistory />} />
+          <Route
+            path="/transactions/transfer"
+            element={<InterAccountTransfer />}
+          />
           <Route path="/transactions/entry" element={<TransactionEntry />} />
 
           {/* Report Routes */}
@@ -120,6 +134,8 @@ const AppRoutes = () => {
           <Route path="/admin/coa" element={<ChartOfAccounts />} />
           <Route path="/admin/interest" element={<InterestPosting />} />
           <Route path="/admin/templates" element={<TemplateManager />} />
+          <Route path="/admin/withdrawals" element={<WithdrawalQueue />} />
+          <Route path="/admin/disbursements" element={<LoanDisbursement />} />
         </Route>
       </Route>
 
@@ -132,9 +148,7 @@ const AppRoutes = () => {
 const App = () => {
   return (
     <Router>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
+      <AppRoutes />
     </Router>
   );
 };
