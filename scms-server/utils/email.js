@@ -42,6 +42,30 @@ module.exports = class Email {
         );
     }
 
+    async sendEmailVerification(token) {
+        const subject = 'Verify Your Email Address - SCMS';
+        const text = `Dear ${this.firstName},\n\nWelcome to SCMS! Please verify your email address to continue setting up your account.\n\nYour Verification Code is: ${token}\n\nThis code will expire in 24 hours.\n\nBest regards,\nSCMS Team`;
+        await this.send(subject, text);
+    }
+
+    async sendWelcome() {
+        const subject = 'Welcome to SCMS! Email Verified Successfully';
+        const text = `Dear ${this.firstName},\n\nYour email has been verified successfully.\n\nTo become a full member and enjoy our benefits, please log in and complete your onboarding profile at: ${this.url}\n\nBest regards,\nSCMS Team`;
+        await this.send(subject, text);
+    }
+
+    async sendOnboardingComplete() {
+        const subject = 'Membership Application Received';
+        const text = `Dear ${this.firstName},\n\nThank you for completing your membership profile! Your application has been received and is currently being reviewed by our administrative team.\n\nYou will receive another email once your account is activated (usually within 48 hours).\n\nBest regards,\nSCMS Team`;
+        await this.send(subject, text);
+    }
+
+    async sendApplicationRejected(reason) {
+        const subject = 'Update on your Membership Application';
+        const text = `Dear ${this.firstName},\n\nThank you for applying to join SCMS. After careful review, we are unable to approve your application at this time.\n\nReason for Rejection:\n${reason}\n\nIf you believe this was an error or if you have any questions, please contact our support team.\n\nBest regards,\nSCMS Team`;
+        await this.send(subject, text);
+    }
+
     async sendFailedDeductionNotice(loan, failedCount) {
         const subject = '⚠️ Loan Payment Deduction Failed - Action Required';
         const text = `Dear ${this.firstName},\n\nWe attempted to deduct your monthly loan payment of ₦${loan.monthlyDeductionAmount} for Loan #${loan.id}, but your savings account has insufficient funds.\n\nLoan Details:\n- Outstanding Balance: ₦${loan.outstandingBalance}\n- Monthly Payment: ₦${loan.monthlyDeductionAmount}\n- Failed Attempts: ${failedCount}/3\n\n⚠️ IMPORTANT: After 3 consecutive failed deductions, your loan will be marked as DEFAULTED and a 2-month extension with additional interest will be automatically applied.\n\nPlease ensure your savings account has sufficient funds before the next deduction attempt.\n\nBest regards,\nSCMS Team`;

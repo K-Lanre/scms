@@ -6,6 +6,7 @@ import {
   FiCheckCircle,
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const SavingsOperations = () => {
   const [activeTab, setActiveTab] = useState("deposit");
@@ -18,7 +19,7 @@ const SavingsOperations = () => {
 
   const onSubmit = (data) => {
     console.log(activeTab.toUpperCase(), data);
-    alert(
+    toast.success(
       `${activeTab === "deposit" ? "Deposit" : "Withdrawal"} request submitted successfully!`,
     );
     reset();

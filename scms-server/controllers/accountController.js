@@ -1,4 +1,4 @@
-const { Account, User } = require('../models');
+const { Account, User, Loan, UserSavingsPlan, SavingsProduct } = require('../models');
 const { generateAccountNumber } = require('../utils/accountHelper');
 const { getAccountStatement } = require('../utils/transactionHelper');
 const catchAsync = require('../utils/catchAsync');
@@ -79,6 +79,40 @@ exports.createAccount = catchAsync(async (req, res, next) => {
                 status: account.status,
                 openedAt: account.openedAt
             }
+        }
+    });
+});
+
+exports.getUserFinancials = catchAsync(async (req, res, next) => {
+    const { userId } = req.params;
+
+    const [accounts, loans, savingsPlans] = await Promise.all([
+        Account.findAll({
+            where: { userId },
+            attributes: ['id', 'accountNumber', 'accountType', 'balance', 'status', 'openedAt'],
+            order: [['createdAt', 'ASC']]
+        }),
+        Loan.findAll({
+            where: { userId },
+            order: [['createdAt', 'DESC']]
+        }),
+        UserSavingsPlan.findAll({
+            where: { userId },
+            include: [{
+                model: SavingsProduct,
+                as: 'product',
+                attributes: ['name', 'type', 'interestRate']
+            }],
+            order: [['createdAt', 'DESC']]
+        })
+    ]);
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            accounts,
+            loans,
+            savingsPlans
         }
     });
 });

@@ -6,7 +6,9 @@ import api from '../../../lib/api';
  */
 
 export const login = async ({ email, password }) => {
+
     const { data } = await api.post('/auth/login', { email, password });
+
     // Persist token so the interceptor can attach it going forward
     localStorage.setItem('token', data.token);
     return data.data.user;
@@ -48,5 +50,24 @@ export const updateMyPassword = async ({ passwordCurrent, password, passwordConf
 
 export const getProfile = async () => {
     const { data } = await api.get('/auth/profile');
+    return data.data.user;
+};
+
+export const verifyEmail = async (token) => {
+    const { data } = await api.post('/auth/verify-email', { token });
+    return data.data.user;
+};
+
+export const resendVerification = async () => {
+    const { data } = await api.post('/auth/resend-verification');
+    return data;
+};
+
+export const updateProfile = async (formData) => {
+    const { data } = await api.patch('/auth/update-profile', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
     return data.data.user;
 };

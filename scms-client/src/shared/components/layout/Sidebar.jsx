@@ -52,12 +52,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       submenu: [{ name: "Directory", path: "/members", icon: <FiList /> }],
     },
     {
-      name: "Onboarding",
-      path: "/members/register",
-      icon: <FiUserPlus />,
-      roles: ["member"],
-    },
-    {
       name: "Savings",
       icon: <FiDollarSign />,
       roles: ["admin", "staff", "member"],
@@ -197,8 +191,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { name: "Messages", path: "/messages", icon: <FiMessageSquare /> },
   ];
 
-  const isRoleAllowed = (allowedRoles) =>
-    !allowedRoles || allowedRoles.includes(role);
+  const isRoleAllowed = (allowedRoles) => {
+    if (!allowedRoles) return true;
+    // super_admin has access to everything that admin or staff has
+    if (role === "super_admin") return true;
+    return allowedRoles.includes(role);
+  };
 
   return (
     <aside

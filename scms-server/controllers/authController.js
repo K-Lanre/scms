@@ -40,9 +40,18 @@ exports.signup = catchAsync(async (req, res, next) => {
         name,
         email,
         password,
-        role: 'user', // Force default role
-        status: 'active'
+        role: 'user',
+        isEmailVerified: false
     });
+
+    const verificationToken = newUser.createEmailVerificationToken();
+    await newUser.save({ validate: false });
+
+    try {
+        await new Email(newUser, '').sendEmailVerification(verificationToken);
+    } catch (err) {
+        console.error('Email failed to send:', err);
+    }
 
     createSendToken(newUser, 201, res);
 });
@@ -76,7 +85,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 
     // 3) Send it to user's email
     try {
-        const resetURL = `${req.protocol}://${req.get('host')}/api/v1/users/resetPassword/${resetToken}`;
+        const resetURL = `${req.protocol}://${req.get('host')}/api/v1/auth/resetPassword/${resetToken}`;
         await new Email(user, resetURL).sendPasswordReset();
 
         res.status(200).json({
@@ -150,4 +159,71 @@ exports.profile = catchAsync(async (req, res, next) => {
             user
         }
     });
+});
+
+exports.verifyEmail = catchAsync(async (req, res, next) => {
+    const { token } = req.body;
+
+    if (!token) {
+        return next(new AppError('Please provide a verification token!', 400));
+    }
+
+    const crypto = require('crypto');
+    const hashedToken = crypto
+        .createHash('sha256')
+        .update(token)
+        .digest('hex');
+
+    const { Op } = require('sequelize');
+    const user = await User.findOne({
+        where: {
+            emailVerificationToken: hashedToken,
+            emailVerificationExpires: { [Op.gt]: Date.now() },
+            id: req.user.id
+        }
+    });
+
+    if (!user) {
+        return next(new AppError('Token is invalid or has expired', 400));
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailVerificationExpires = null;
+    await user.save({ validate: false });
+
+    // Send the welcome email since they verified
+    const onboardingUrl = `${req.protocol}://${req.get('host')}/onboarding`;
+    try {
+        await new Email(user, onboardingUrl).sendWelcome();
+    } catch (err) {
+        console.error('Welcome email failed to send:', err);
+    }
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Email has been verified successfully',
+        data: { user }
+    });
+});
+
+exports.resendVerification = catchAsync(async (req, res, next) => {
+    const user = await User.findByPk(req.user.id);
+
+    if (!user) return next(new AppError('User not found', 404));
+    if (user.isEmailVerified) return next(new AppError('Email is already verified', 400));
+
+    const verificationToken = user.createEmailVerificationToken();
+    await user.save({ validate: false });
+
+    try {
+        await new Email(user, '').sendEmailVerification(verificationToken);
+        res.status(200).json({
+            status: 'success',
+            message: 'Verification code sent to your email.'
+        });
+    } catch (err) {
+        console.error('Failed to send verification email:', err);
+        return next(new AppError('Error sending verification email. Please try again later.', 500));
+    }
 });

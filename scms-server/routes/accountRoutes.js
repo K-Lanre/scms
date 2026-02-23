@@ -26,4 +26,7 @@ router.get('/:id', accountController.getAccountById);
 // Get account statement
 router.get('/:id/statement', accountController.getAccountStatement);
 
+// Get user financials (staff/admin only)
+router.get('/user/:userId', restrictTo('super_admin', 'staff'), accountController.getUserFinancials);
+
 module.exports = router;

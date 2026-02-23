@@ -56,9 +56,41 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('super_admin', 'staff', 'member', 'user'),
       defaultValue: 'user'
     },
+    isEmailVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
     status: {
-      type: DataTypes.ENUM('active', 'inactive', 'suspended'),
-      defaultValue: 'active'
+      type: DataTypes.ENUM('active', 'inactive', 'suspended', 'pending_onboarding', 'pending_approval', 'rejected'),
+      defaultValue: 'pending_onboarding'
+    },
+    rejectionReason: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    gender: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    occupation: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    employer: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    maritalStatus: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    membershipType: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    addressProof: {
+      type: DataTypes.STRING,
+      allowNull: true
     },
     phoneNumber: {
       type: DataTypes.STRING,
@@ -124,6 +156,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true
     },
+    emailVerificationToken: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    emailVerificationExpires: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     bankName: {
       type: DataTypes.STRING,
       allowNull: true
@@ -162,6 +202,24 @@ module.exports = (sequelize, DataTypes) => {
     this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     return resetToken;
+  };
+
+  User.prototype.createEmailVerificationToken = function () {
+    // Generate a simple 6-digit code for email verification
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // We can just store the string code directly without hashing for simpler validation 
+    // or hash it if we want extra security. Given it's a 6 digit code sent to email, 
+    // hashing it is safer against DB leaks.
+    const crypto = require('crypto');
+    this.emailVerificationToken = crypto
+      .createHash('sha256')
+      .update(verificationCode)
+      .digest('hex');
+
+    this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+
+    return verificationCode;
   };
 
   return User;

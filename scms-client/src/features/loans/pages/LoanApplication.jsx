@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { FiDollarSign, FiCalendar, FiPercent, FiUsers } from "react-icons/fi";
+import toast from "react-hot-toast";
 
 const LoanApplication = () => {
   const {
@@ -57,7 +58,7 @@ const LoanApplication = () => {
 
   const onSubmit = (data) => {
     console.log("Submitting Loan Application:", data);
-    alert("Loan application submitted successfully!");
+    toast.success("Loan application submitted successfully!");
   };
 
   return (

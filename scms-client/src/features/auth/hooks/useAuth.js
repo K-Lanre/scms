@@ -1,7 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import * as authApi from "../services/authApi";
+import toast from "react-hot-toast";
 
 export const useAuth = () => {
+    const queryClient = useQueryClient();
+    const token = localStorage.getItem("token");
+
     const {
         data: user,
         isLoading,
@@ -10,7 +15,9 @@ export const useAuth = () => {
         queryKey: ["user"],
         queryFn: authApi.getProfile,
         retry: false,
-        staleTime: Infinity,
+        enabled: !!token,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        gcTime: 1000 * 60 * 60,   // 1 hour
     });
 
     return {
@@ -29,12 +36,17 @@ export const useLogin = () => {
         mutationFn: authApi.login,
         onSuccess: (user) => {
             queryClient.setQueryData(["user"], user);
+            toast.success(`Welcome back, ${user.name}!`);
         },
+        onError: (err) => {
+            toast.error(err.response?.data?.message || "Login failed. Please check your credentials.");
+        }
     });
 };
 
 export const useLogout = () => {
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
 
     return useMutation({
         mutationFn: async () => {
@@ -43,7 +55,8 @@ export const useLogout = () => {
         onSuccess: () => {
             queryClient.setQueryData(["user"], null);
             queryClient.clear();
-            window.location.href = "/login";
+            toast.success("Logged out successfully");
+            navigate("/login", { replace: true });
         },
     });
 };
@@ -55,7 +68,11 @@ export const useSignup = () => {
         mutationFn: authApi.signup,
         onSuccess: (user) => {
             queryClient.setQueryData(["user"], user);
+            toast.success("Account created successfully!");
         },
+        onError: (err) => {
+            toast.error(err.response?.data?.message || "Signup failed. Please try again.");
+        }
     });
 };
 
@@ -79,5 +96,52 @@ export const useResetPassword = () => {
 export const useUpdatePassword = () => {
     return useMutation({
         mutationFn: authApi.updateMyPassword,
+        onSuccess: () => {
+            toast.success("Password updated successfully!");
+        },
+        onError: (err) => {
+            toast.error(err.response?.data?.message || "Password update failed.");
+        }
+    });
+};
+
+export const useVerifyEmail = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: authApi.verifyEmail,
+        onSuccess: (user) => {
+            queryClient.setQueryData(["user"], user);
+            toast.success("Email verified successfully!");
+        },
+        onError: (err) => {
+            toast.error(err.response?.data?.message || "Verification failed. Please check your code.");
+        }
+    });
+};
+
+export const useResendVerification = () => {
+    return useMutation({
+        mutationFn: authApi.resendVerification,
+        onSuccess: (data) => {
+            toast.success(data?.message || "Verification code sent to your email!");
+        },
+        onError: (err) => {
+            toast.error(err.response?.data?.message || "Failed to resend verification code.");
+        }
+    });
+};
+
+export const useUpdateProfile = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: authApi.updateProfile,
+        onSuccess: (updatedUser) => {
+            queryClient.setQueryData(["user"], updatedUser);
+            toast.success("Profile updated successfully!");
+        },
+        onError: (err) => {
+            toast.error(err.response?.data?.message || "Failed to update profile.");
+        }
     });
 };

@@ -12,6 +12,7 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public'));
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
 const paystackWebhookController = require('./controllers/paystackWebhookController'); // Added this line
@@ -20,7 +21,8 @@ const swaggerSpecs = require('./config/swagger');
 
 // Routes
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
-app.use('/api/v1/users', authRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', authRoutes); // Maintain alias for now to prevent breaking changes
 app.use('/api/v1/accounts', accountRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/loans', loanRoutes);

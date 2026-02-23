@@ -1,4 +1,4 @@
-import React from "react";
+import { Toaster } from "react-hot-toast";
 import {
   BrowserRouter as Router,
   Routes,
@@ -15,13 +15,14 @@ import Register from "./features/auth/pages/Register";
 import ForgotPassword from "./features/auth/pages/ForgotPassword";
 import UserProfile from "./features/auth/pages/UserProfile";
 import ResetPassword from "./features/auth/pages/ResetPassword";
+import VerifyEmail from "./features/auth/pages/VerifyEmail";
+import Onboarding from "./features/auth/pages/Onboarding";
+import PendingApproval from "./features/auth/pages/PendingApproval";
 
 import Dashboard from "./features/dashboard/pages/Dashboard";
 import Messages from "./features/dashboard/pages/Messages";
 import Support from "./features/dashboard/pages/Support";
 
-import MemberDirectory from "./features/members/pages/MemberDirectory";
-import MemberRegistration from "./features/members/pages/MemberRegistration";
 import MemberProfile from "./features/members/pages/MemberProfile";
 import SavingsOverview from "./features/savings/pages/SavingsOverview";
 import SavingsOperations from "./features/savings/pages/SavingsOperations";
@@ -53,10 +54,18 @@ import FinancialStatements from "./features/reports/pages/FinancialStatements";
 import LandingPage from "./features/landing/pages/LandingPage";
 import NotFound from "./features/NotFound";
 
+import React, { useEffect } from "react";
 import { useAuth } from "./features/auth/hooks/useAuth";
+import { setNavigate } from "./lib/api";
+import { useNavigate } from "react-router-dom";
 
 const AppRoutes = () => {
   const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setNavigate(navigate);
+  }, [navigate]);
 
   if (isLoading) return null; // Or a loading spinner
 
@@ -82,16 +91,19 @@ const AppRoutes = () => {
 
       {/* Protected Routes */}
       <Route element={<PrivateRoute />}>
+        {/* Focused Onboarding Pages (No Sidebar/Header) */}
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+
         <Route element={<MainLayout />}>
-          {/* Removed: <Route path="/" element={<Navigate to="/dashboard" replace />} /> */}
+          <Route path="/pending-approval" element={<PendingApproval />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/support" element={<Support />} />
 
           {/* Member Routes */}
-          <Route path="/members" element={<MemberDirectory />} />
-          <Route path="/members/register" element={<MemberRegistration />} />
+          <Route path="/members" element={<UserManagement />} />
           <Route path="/members/:id" element={<MemberProfile />} />
 
           {/* Savings Routes */}
@@ -148,6 +160,7 @@ const AppRoutes = () => {
 const App = () => {
   return (
     <Router>
+      <Toaster position="top-right" reverseOrder={false} />
       <AppRoutes />
     </Router>
   );

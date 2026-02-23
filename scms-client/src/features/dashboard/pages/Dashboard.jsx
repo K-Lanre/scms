@@ -94,19 +94,21 @@ const Dashboard = () => {
     },
   ];
 
-  const stats = role === "admin" || role === "staff" ? adminStats : memberStats;
+  const isAdmin =
+    role === "admin" || role === "super_admin" || role === "staff";
+  const stats = isAdmin ? adminStats : memberStats;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
-            {role === "admin"
+            {isAdmin
               ? "Admin Dashboard"
               : `Welcome back, ${user?.name || "Member"}!`}
           </h1>
           <p className="text-gray-600">
-            {role === "admin"
+            {isAdmin
               ? "System overview and performance metrics."
               : "Here is your financial summary."}
           </p>
@@ -159,7 +161,7 @@ const Dashboard = () => {
       </div>
 
       {/* Admin Charts Section */}
-      {(role === "admin" || role === "staff") && (
+      {isAdmin && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h3 className="text-lg font-bold text-gray-800 mb-4">

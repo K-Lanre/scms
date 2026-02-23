@@ -25,14 +25,29 @@ api.interceptors.request.use(
     (error) => Promise.reject(error),
 );
 
+let navigate = null;
+
+/**
+ * Configure the navigate function to be used outside of React components.
+ */
+export const setNavigate = (nav) => {
+    navigate = nav;
+};
+
 // ─── Response Interceptor ─────────────────────────────────────────────────────
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            // Clear stale token and redirect to login
+        const isLoginRequest = error.config?.url?.includes('/auth/login');
+
+        if (error.response?.status === 401 && !isLoginRequest) {
+            // Clear stale token and redirect to login for protected routes
             localStorage.removeItem('token');
-            window.location.href = '/login';
+            if (navigate) {
+                navigate('/login');
+            } else {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     },

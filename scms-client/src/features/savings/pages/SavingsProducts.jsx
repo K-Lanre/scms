@@ -12,6 +12,7 @@ import {
   FiClock,
   FiDollarSign,
 } from "react-icons/fi";
+import toast from "react-hot-toast";
 
 const SavingsProducts = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -197,11 +198,13 @@ const SavingsProducts = () => {
                       p.id === editingProduct.id ? { ...p, ...data } : p,
                     ),
                   );
+                  toast.success("Savings product updated!");
                 } else {
                   setProducts((prev) => [
                     ...prev,
                     { ...data, id: Date.now(), status: "Active" },
                   ]);
+                  toast.success("Savings product created!");
                 }
                 closeModal();
               })}

@@ -8,6 +8,7 @@ import {
   FiSettings,
   FiMail,
 } from "react-icons/fi";
+import toast from "react-hot-toast";
 
 const SystemSettings = () => {
   const [activeTab, setActiveTab] = useState("general");
@@ -28,7 +29,7 @@ const SystemSettings = () => {
 
   const onSaveSection = (section) => (data) => {
     console.log(`Saving ${section} settings:`, data);
-    alert(`${section} settings updated successfully!`);
+    toast.success(`${section} settings updated successfully!`);
   };
 
   return (
