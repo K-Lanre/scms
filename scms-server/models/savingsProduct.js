@@ -28,11 +28,26 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     type: {
-      type: DataTypes.ENUM('fixed', 'target'),
+      type: DataTypes.ENUM('fixed', 'target', 'safebox'),
+      allowNull: false
+    },
+    category: {
+      type: DataTypes.ENUM('none', 'rent', 'education', 'business', 'emergency', 'festive'),
+      defaultValue: 'none',
+      allowNull: false
+    },
+    isQuickSaving: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
       allowNull: false
     },
     interestRate: {
       type: DataTypes.DECIMAL(5, 2),
+      allowNull: false,
+      defaultValue: 0.00
+    },
+    minDeposit: {
+      type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
       defaultValue: 0.00
     },

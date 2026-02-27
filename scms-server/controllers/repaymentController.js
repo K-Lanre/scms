@@ -3,6 +3,7 @@ const { recordTransaction } = require('../utils/transactionHelper');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const { formatAmount } = require('../utils/accountHelper');
+const { logAction } = require('../utils/auditLogger');
 
 /**
  * @swagger
@@ -111,6 +112,8 @@ exports.makeManualRepayment = catchAsync(async (req, res, next) => {
         }, { transaction: t });
 
         await t.commit();
+
+        logAction(req, 'LOAN_REPAYMENT', { loanId: loan.id, amount, newOutstanding });
 
         res.status(200).json({
             status: 'success',

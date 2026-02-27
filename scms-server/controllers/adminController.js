@@ -1,5 +1,6 @@
 const { User, Account, Loan, UserSavingsPlan, SavingsProduct, Transaction, LoanRepayment, sequelize } = require('../models');
 const catchAsync = require('../utils/catchAsync');
+const { logAction } = require('../utils/auditLogger');
 
 /**
  * @swagger

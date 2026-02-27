@@ -33,38 +33,12 @@ export const getAuditLogs = async (params) => {
     return data.data;
 };
 
-// ─── User Approvals ───────────────────────────────────────────────────────────
-export const getPendingUsers = async () => {
-    const { data } = await api.get('/users?status=pending_approval');
-    return data.data.users;
-};
 
-export const approveUser = async (userId) => {
-    const { data } = await api.patch(`/users/${userId}/approve`);
-    return data.data;
-};
-
-export const rejectUser = async (userId, reason) => {
-    const { data } = await api.patch(`/users/${userId}/reject`, { reason });
-    return data.data;
-};
-
-export const adminUpdateUser = async (userId, updateData) => {
-    const { data } = await api.patch(`/users/${userId}/admin-update`, updateData);
-    return data.data.user;
-};
-
-export const adminCreateUser = async (userData) => {
-    const { data } = await api.post('/users/admin-create', userData);
-    return data.data.user;
-};
-
-export const getUserFinancials = async (userId) => {
-    const { data } = await api.get(`/accounts/user/${userId}`);
-    return data.data;
-};
-
-export const getUsers = async () => {
-    const { data } = await api.get('/users');
-    return data.data.users;
+module.exports = {
+    getFinancialSummary,
+    getLoanMetrics,
+    getSavingsMetrics,
+    getSettings,
+    updateSettings,
+    getAuditLogs
 };

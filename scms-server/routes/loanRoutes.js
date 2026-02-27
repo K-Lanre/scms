@@ -18,7 +18,7 @@ router.post('/apply', restrictTo('member'), loanController.applyForLoan);
 router.get('/', loanController.getAllLoans);
 
 router.patch('/:id/review', restrictTo('staff', 'super_admin'), loanController.reviewLoan);
-router.post('/:id/disburse', restrictTo('staff', 'super_admin'), loanController.disburseLoan);
+router.patch('/:id/disburse', restrictTo('staff', 'super_admin'), loanController.disburseLoan);
 
 // Repayment routes
 router.post('/:id/repay', repaymentController.makeManualRepayment);

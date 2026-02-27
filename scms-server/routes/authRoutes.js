@@ -30,9 +30,6 @@ router.patch('/update-profile', uploadMiddleware.uploadProfileAndDocs, userContr
 router.patch('/submit-onboarding', uploadMiddleware.uploadOnboardingImages, userController.submitOnboarding);
 
 // ADMIN ONLY ROUTES (Requires Login + Admin/Staff role)
-router.use(authMiddleware.restrictTo('super_admin', 'staff'));
-
-router.patch('/:id/approve', userController.approveMember);
-router.get('/', userController.getAllUsers);
+// Admin user management now handled by userRoutes.js
 
 module.exports = router;

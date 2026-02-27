@@ -25,6 +25,7 @@ import {
   FiBox,
   FiMail,
   FiArrowUpRight,
+  FiTrendingUp,
 } from "react-icons/fi";
 import { useAuth, useLogout } from "../../../features/auth/hooks/useAuth";
 
@@ -44,12 +45,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       path: "/dashboard",
       icon: <FiHome />,
       roles: ["admin", "staff", "member"],
-    },
-    {
-      name: "Members",
-      icon: <FiUsers />,
-      roles: ["admin", "staff"],
-      submenu: [{ name: "Directory", path: "/members", icon: <FiList /> }],
     },
     {
       name: "Savings",
@@ -149,6 +144,16 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           name: "Statements",
           path: "/reports/statements",
           icon: <FiFileText />,
+        },
+        {
+          name: "Balance Sheet",
+          path: "/reports/balance-sheet",
+          icon: <FiTrendingUp />,
+        },
+        {
+          name: "Income Statement",
+          path: "/reports/income-statement",
+          icon: <FiActivity />,
         },
       ],
     },

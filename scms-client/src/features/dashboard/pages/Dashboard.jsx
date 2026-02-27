@@ -24,47 +24,63 @@ import {
 } from "recharts";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { Link } from "react-router-dom";
+import { getDashboardStats, getChartData } from "../services/dashboardApi";
 
 const Dashboard = () => {
   const { user, role } = useAuth();
+  const [statsData, setStatsData] = React.useState(null);
+  const [chartData, setChartData] = React.useState([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  const data = [
-    { name: "Jan", savings: 4000, loans: 2400 },
-    { name: "Feb", savings: 3000, loans: 1398 },
-    { name: "Mar", savings: 2000, loans: 9800 },
-    { name: "Apr", savings: 2780, loans: 3908 },
-    { name: "May", savings: 1890, loans: 4800 },
-    { name: "Jun", savings: 2390, loans: 3800 },
-  ];
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [statsRes, chartRes] = await Promise.all([
+          getDashboardStats(),
+          getChartData(),
+        ]);
+        setStatsData(statsRes.data);
+        setChartData(chartRes.data);
+      } catch (err) {
+        console.error("Failed to fetch dashboard data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const isAdmin =
+    role === "admin" || role === "super_admin" || role === "staff";
 
   /* Admin Stats */
   const adminStats = [
     {
       title: "Total Members",
-      value: "1,234",
+      value: statsData?.totalMembers || "...",
       icon: <FiUsers />,
-      change: "+12 new",
+      change: "System Total",
       color: "blue",
     },
     {
       title: "Active Loans",
-      value: "₦12.8M",
+      value: statsData?.totalLoansVolume || "...",
       icon: <FiCreditCard />,
-      change: "-2.1%",
+      change: "Principal sum",
       color: "orange",
     },
     {
-      title: "Pending Requests",
-      value: "15",
+      title: "Pending Actions",
+      value: statsData?.pendingActions || "0",
       icon: <FiClock />,
-      change: "Needs Attention",
+      change: "Tasks for review",
       color: "purple",
     },
     {
       title: "Defaulters",
-      value: "2",
+      value: statsData?.defaulters || "0",
       icon: <FiAlertCircle />,
-      change: "Critical",
+      change: statsData?.defaulters > 0 ? "Critical" : "Good standing",
       color: "red",
     },
   ];
@@ -73,30 +89,33 @@ const Dashboard = () => {
   const memberStats = [
     {
       title: "My Savings",
-      value: "₦250,500",
+      value: statsData?.mySavings || "...",
       icon: <FiDollarSign />,
-      change: "+₦10k last month",
+      change: "Total balance",
       color: "green",
     },
     {
       title: "Loan Balance",
-      value: "₦45,000",
+      value: statsData?.loanBalance || "...",
       icon: <FiCreditCard />,
-      change: "Due in 15 days",
+      change: "Outstanding sum",
       color: "orange",
     },
     {
       title: "Shares",
-      value: "1,500 units",
+      value: statsData?.shares || "...",
       icon: <FiTrendingUp />,
-      change: "Value: ₦150k",
+      change: "Share capital",
       color: "blue",
     },
   ];
 
-  const isAdmin =
-    role === "admin" || role === "super_admin" || role === "staff";
   const stats = isAdmin ? adminStats : memberStats;
+
+  if (isLoading)
+    return (
+      <div className="p-10 text-center text-gray-400">Loading Dashboard...</div>
+    );
 
   return (
     <div className="space-y-6">
@@ -141,7 +160,8 @@ const Dashboard = () => {
               </div>
               <span
                 className={`text-xs font-medium px-2 py-1 rounded-full ${
-                  stat.change.includes("+")
+                  stat.change.includes("System") ||
+                  stat.change.includes("Total")
                     ? "bg-green-50 text-green-600"
                     : stat.change.includes("Critical") ||
                         stat.change.includes("-")
@@ -169,7 +189,7 @@ const Dashboard = () => {
             </h3>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data}>
+                <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} />
                   <YAxis axisLine={false} tickLine={false} />
@@ -267,40 +287,55 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="text-sm">
-                <tr className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="py-3 px-2">
-                    <span className="text-green-600 font-bold bg-green-50 px-2 py-1 rounded text-xs">
-                      Credit
-                    </span>
-                  </td>
-                  <td className="py-3 px-2 font-medium text-gray-700">
-                    Monthly Savings Contribution
-                  </td>
-                  <td className="py-3 px-2 text-gray-500">Feb 01, 2024</td>
-                  <td className="py-3 px-2 text-right font-bold text-gray-900">
-                    ₦25,000
-                  </td>
-                  <td className="py-3 px-2 text-center">
-                    <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="py-3 px-2">
-                    <span className="text-red-600 font-bold bg-red-50 px-2 py-1 rounded text-xs">
-                      Debit
-                    </span>
-                  </td>
-                  <td className="py-3 px-2 font-medium text-gray-700">
-                    Loan Repayment (Auto)
-                  </td>
-                  <td className="py-3 px-2 text-gray-500">Jan 28, 2024</td>
-                  <td className="py-3 px-2 text-right font-bold text-gray-900">
-                    ₦12,500
-                  </td>
-                  <td className="py-3 px-2 text-center">
-                    <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
-                  </td>
-                </tr>
+                {statsData?.recentTransactions?.length > 0 ? (
+                  statsData.recentTransactions.map((tx) => (
+                    <tr
+                      key={tx.id}
+                      className="border-b border-gray-50 hover:bg-gray-50"
+                    >
+                      <td className="py-3 px-2">
+                        <span
+                          className={`${
+                            tx.transactionType === "deposit" ||
+                            tx.transactionType === "savings_contribution" ||
+                            tx.transactionType === "loan_disbursement"
+                              ? "text-green-600 bg-green-50"
+                              : "text-red-600 bg-red-50"
+                          } font-bold px-2 py-1 rounded text-xs`}
+                        >
+                          {tx.transactionType.replace("_", " ").toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 font-medium text-gray-700">
+                        {tx.description}
+                      </td>
+                      <td className="py-3 px-2 text-gray-500">
+                        {new Date(tx.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-2 text-right font-bold text-gray-900">
+                        ₦{parseFloat(tx.amount).toLocaleString()}
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            tx.status === "completed"
+                              ? "bg-green-500"
+                              : "bg-yellow-500"
+                          } inline-block`}
+                        ></span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan="5"
+                      className="py-10 text-center text-gray-400 italic"
+                    >
+                      No recent transactions found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

@@ -18,8 +18,7 @@ router.patch('/:id/reject', restrictTo('super_admin', 'staff'), userController.r
 
 // Allow Admin to update user role/status
 router.patch('/:id/admin-update', restrictTo('super_admin', 'staff'), userController.adminUpdateUser);
-
-// Allow Admin to create user directly
+router.get('/:id', restrictTo('super_admin', 'staff'), userController.getUser);
 router.post('/admin-create', restrictTo('super_admin'), userController.adminCreateUser);
 
 router.get('/', restrictTo('super_admin', 'staff'), userController.getAllUsers);

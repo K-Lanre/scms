@@ -11,7 +11,7 @@ import {
   FiBriefcase,
   FiMapPin,
 } from "react-icons/fi";
-import { useAdminUpdateUser } from "../../../features/admin/hooks/useAdmin";
+import { useUpdateMember as useAdminUpdateUser } from "../../../features/members/hooks/useMembers";
 import BaseModal from "./BaseModal";
 
 const UserEditModal = ({ user, onClose }) => {
@@ -64,7 +64,7 @@ const UserEditModal = ({ user, onClose }) => {
   const onSubmit = (data) => {
     updateUserMutation.mutate(
       {
-        userId: user.id,
+        id: user.id,
         updateData: data,
       },
       {

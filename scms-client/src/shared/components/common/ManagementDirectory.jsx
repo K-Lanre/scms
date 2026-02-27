@@ -52,7 +52,7 @@ const ManagementDirectory = ({
 
       <div className="flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-4 items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
         {searchKeys.length > 0 && (
-          <div className="relative flex-1 w-full relative">
+          <div className="relative flex-1 w-full">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"

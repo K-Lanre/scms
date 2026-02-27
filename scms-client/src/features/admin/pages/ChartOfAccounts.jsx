@@ -1,76 +1,39 @@
-import React, { useState } from "react";
-import {
-  FiFolder,
-  FiFileText,
-  FiPlus,
-  FiSearch,
-  FiFilter,
-  FiCheckCircle,
-  FiMinusCircle,
-  FiArrowRight,
-} from "react-icons/fi";
+import { getChartOfAccounts } from "../services/coaApi";
+import toast from "react-hot-toast";
 
 const ChartOfAccounts = () => {
   const [activeTab, setActiveTab] = useState("all");
+  const [accounts, setAccounts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const accounts = [
-    {
-      code: "1000",
-      name: "Assets",
-      type: "Header",
-      balance: "₦15,450,000",
-      status: "Enabled",
-    },
-    {
-      code: "1001",
-      name: "Cash at Bank",
-      type: "Asset",
-      balance: "₦12,800,000",
-      status: "Enabled",
-    },
-    {
-      code: "1002",
-      name: "Outstanding Loans",
-      type: "Asset",
-      balance: "₦2,650,000",
-      status: "Enabled",
-    },
-    {
-      code: "2000",
-      name: "Liabilities",
-      type: "Header",
-      balance: "₦10,200,500",
-      status: "Enabled",
-    },
-    {
-      code: "2001",
-      name: "Member Savings",
-      type: "Liability",
-      balance: "₦9,850,500",
-      status: "Enabled",
-    },
-    {
-      code: "3000",
-      name: "Equity",
-      type: "Header",
-      balance: "₦3,500,000",
-      status: "Enabled",
-    },
-    {
-      code: "4000",
-      name: "Income",
-      type: "Header",
-      balance: "₦2,150,000",
-      status: "Enabled",
-    },
-    {
-      code: "5000",
-      name: "Expenses",
-      type: "Header",
-      balance: "₦400,500",
-      status: "Enabled",
-    },
-  ];
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await getChartOfAccounts();
+        setAccounts(res.data);
+      } catch (err) {
+        toast.error("Failed to load Chart of Accounts");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const filteredAccounts = accounts.filter((acc) => {
+    if (activeTab === "all") return true;
+    return (
+      acc.type.toLowerCase() === activeTab.slice(0, -1) ||
+      (acc.type === "Header" && acc.name.toLowerCase().includes(activeTab))
+    );
+  });
+
+  if (isLoading)
+    return (
+      <div className="p-10 text-center text-gray-400">
+        Loading Chart of Accounts...
+      </div>
+    );
 
   return (
     <div className="space-y-6">
@@ -143,7 +106,7 @@ const ChartOfAccounts = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {accounts.map((acc) => (
+              {filteredAccounts.map((acc) => (
                 <tr
                   key={acc.code}
                   className={`hover:bg-slate-50/50 transition-colors ${acc.type === "Header" ? "bg-slate-50/30" : ""}`}

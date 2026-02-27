@@ -1,6 +1,12 @@
 import React, { useState } from "react";
-import { FiPlus, FiShield, FiUser } from "react-icons/fi";
-import { useUsers, useAdminUpdateUser } from "../hooks/useAdmin";
+import { FiPlus, FiShield, FiUser, FiEye } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
+import {
+  useMembers,
+  useAllUsers,
+  useAdminCreateUser,
+  useUpdateMember as useAdminUpdateUser,
+} from "../../members/hooks/useMembers";
 import ManagementDirectory from "../../../shared/components/common/ManagementDirectory";
 import UserActionMenu from "../../../shared/components/common/UserActionMenu";
 import UserActionForm from "../../../shared/components/common/UserActionForm";
@@ -8,9 +14,13 @@ import UserDetailsModal from "../../../shared/components/common/UserDetailsModal
 import UserEditModal from "../../../shared/components/common/UserEditModal";
 import UserFinancialsModal from "../../../shared/components/common/UserFinancialsModal";
 
+import { useConfirm } from "../../../contexts/ConfirmationContext";
+
 const UserManagement = () => {
-  const { data: users = [], isLoading, isError } = useUsers();
+  const navigate = useNavigate();
+  const { data: users = [], isLoading, isError } = useAllUsers();
   const updateUserMutation = useAdminUpdateUser();
+  const confirm = useConfirm();
 
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [viewingUser, setViewingUser] = useState(null);
@@ -20,27 +30,33 @@ const UserManagement = () => {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const handleUpdateRole = (user, newRole) => {
-    if (
-      window.confirm(
-        `Are you sure you want to promote ${user.name} to ${newRole.replace(/_/g, " ")}?`,
-      )
-    ) {
+  const handleUpdateRole = async (user, newRole) => {
+    const isConfirmed = await confirm({
+      title: "Confirm Role Change",
+      message: `Are you sure you want to promote ${user.name} to ${newRole.replace(/_/g, " ")}?`,
+      type: "warning",
+      confirmLabel: "Change Role",
+    });
+
+    if (isConfirmed) {
       updateUserMutation.mutate({
-        userId: user.id,
+        id: user.id,
         updateData: { role: newRole },
       });
     }
   };
 
-  const handleUpdateStatus = (user, newStatus) => {
-    if (
-      window.confirm(
-        `Are you sure you want to change ${user.name}'s status to ${newStatus}?`,
-      )
-    ) {
+  const handleUpdateStatus = async (user, newStatus) => {
+    const isConfirmed = await confirm({
+      title: "Change Account Status",
+      message: `Are you sure you want to change ${user.name}'s status to ${newStatus}?`,
+      type: "warning",
+      confirmLabel: "Update Status",
+    });
+
+    if (isConfirmed) {
       updateUserMutation.mutate({
-        userId: user.id,
+        id: user.id,
         updateData: { status: newStatus },
       });
     }
@@ -120,12 +136,20 @@ const UserManagement = () => {
       accessor: "actions",
       align: "right",
       render: (user) => (
-        <div className="flex justify-end">
+        <div className="flex justify-end space-x-2">
+          <button
+            onClick={() => navigate(`/admin/users/${user.id}`)}
+            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="View Full Profile"
+          >
+            <FiUser size={18} />
+          </button>
           <UserActionMenu
             user={user}
-            onViewProfile={() => setViewingUser(user)}
+            onViewProfile={() => navigate(`/admin/users/${user.id}`)}
             onEdit={() => setEditingUser(user)}
             onViewFinancials={() => setFinancialUser(user)}
+            onReviewRegistration={() => setViewingUser(user)}
             onSuspend={() => handleUpdateStatus(user, "suspended")}
             onActivate={() => handleUpdateStatus(user, "active")}
             onMakeAdmin={() => handleUpdateRole(user, "super_admin")}

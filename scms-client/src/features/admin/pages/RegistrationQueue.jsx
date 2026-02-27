@@ -14,46 +14,47 @@ import {
   FiPhone,
 } from "react-icons/fi";
 import {
+  useMembers,
+  useApproveMember,
   usePendingRegistrations,
-  useApproveUser,
-  useRejectUser,
-} from "../hooks/useAdmin";
+  useRejectMember,
+} from "../../members/hooks/useMembers";
 import ManagementDirectory from "../../../shared/components/common/ManagementDirectory";
 import UserActionMenu from "../../../shared/components/common/UserActionMenu";
 import BaseModal from "../../../shared/components/common/BaseModal";
+import ConfirmationModal from "../../../shared/components/common/ConfirmationModal";
+import toast from "react-hot-toast";
 
 const RegistrationQueue = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [userToReject, setUserToReject] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [userToApprove, setUserToApprove] = useState(null);
 
   const {
     data: pendingUsers = [],
     isLoading,
     isError,
   } = usePendingRegistrations();
-  const approveUserMutation = useApproveUser();
-  const rejectUserMutation = useRejectUser();
+  const approveUserMutation = useApproveMember();
+  const rejectUserMutation = useRejectMember();
 
-  const handleApprove = async (userId) => {
-    if (
-      window.confirm(
-        "Are you sure you want to approve this user? Their accounts will be automatically created.",
-      )
-    ) {
-      await approveUserMutation.mutateAsync(userId);
-      setSelectedUser(null);
-    }
+  const handleApprove = async () => {
+    if (!userToApprove) return;
+
+    await approveUserMutation.mutateAsync(userToApprove);
+    setUserToApprove(null);
+    setSelectedUser(null);
   };
 
   const submitRejection = async () => {
     if (!rejectionReason.trim()) {
-      alert("Please provide a reason for rejection.");
+      toast.error("Please provide a reason for rejection.");
       return;
     }
 
     await rejectUserMutation.mutateAsync({
-      userId: userToReject.id,
+      id: userToReject.id,
       reason: rejectionReason,
     });
 
@@ -97,7 +98,13 @@ const RegistrationQueue = () => {
       header: "Status",
       accessor: "status",
       render: (reg) => (
-        <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${
+            reg.status === "rejected"
+              ? "bg-red-50 text-red-700 border-red-200"
+              : "bg-amber-50 text-amber-700 border-amber-200"
+          }`}
+        >
           {reg.status.replace("_", " ")}
         </span>
       ),
@@ -129,20 +136,20 @@ const RegistrationQueue = () => {
             <FiEye className="mr-1" /> Review
           </button>
           <button
-            onClick={() => handleApprove(reg.id)}
+            onClick={() => setUserToApprove(reg.id)}
             disabled={approveUserMutation.isPending}
             className="p-1.5 text-green-600 hover:bg-green-50 rounded border border-transparent hover:border-green-200 transition-all"
             title="Quick Approve"
           >
             <FiCheckCircle size={18} />
           </button>
-          <button
-            onClick={() => setUserToReject(reg)}
-            className="p-1.5 text-red-600 hover:bg-red-50 rounded border border-transparent hover:border-red-200 transition-all"
-            title="Reject"
-          >
-            <FiXCircle size={18} />
-          </button>
+          <UserActionMenu
+            user={reg}
+            onViewProfile={() => setSelectedUser(reg)}
+            onReviewRegistration={() => setSelectedUser(reg)}
+            onSuspend={() => toast.error("Active users only")}
+            onActivate={() => setUserToApprove(reg.id)}
+          />
         </div>
       ),
     },
@@ -195,12 +202,24 @@ const RegistrationQueue = () => {
 
                   <div className="w-full flex space-x-3 mt-6">
                     <button
-                      onClick={() => handleApprove(selectedUser.id)}
+                      onClick={() => setUserToApprove(selectedUser.id)}
                       className="flex-1 py-2 bg-green-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-green-700 transition"
                     >
                       Approve
                     </button>
                   </div>
+
+                  {selectedUser.status === "rejected" &&
+                    selectedUser.rejectionReason && (
+                      <div className="mt-6 p-4 bg-red-50 rounded-xl border border-red-100 text-left">
+                        <div className="flex items-center text-red-600 font-bold text-[10px] uppercase tracking-wider mb-1.5">
+                          <FiXCircle className="mr-1.5" /> Previous Rejection
+                        </div>
+                        <p className="text-xs text-red-700 font-medium leading-relaxed italic">
+                          "{selectedUser.rejectionReason}"
+                        </p>
+                      </div>
+                    )}
                 </div>
 
                 {/* ID / Identification */}
@@ -486,6 +505,18 @@ const RegistrationQueue = () => {
           ></textarea>
         </div>
       </BaseModal>
+
+      {/* Confirmation Modal for Approval */}
+      <ConfirmationModal
+        isOpen={!!userToApprove}
+        onClose={() => setUserToApprove(null)}
+        onConfirm={handleApprove}
+        title="Approve Application"
+        message="Are you sure you want to approve this applicant? This will automatically create their system accounts."
+        confirmLabel="Approve Now"
+        type="success"
+        isLoading={approveUserMutation.isPending}
+      />
     </div>
   );
 };

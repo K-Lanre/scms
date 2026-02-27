@@ -7,7 +7,7 @@ import {
   FiUser,
   FiLayers,
 } from "react-icons/fi";
-import { useAdminCreateUser } from "../../../features/admin/hooks/useAdmin";
+import { useAdminCreateUser } from "../../../features/members/hooks/useMembers";
 import { useForm } from "react-hook-form";
 import BaseModal from "./BaseModal";
 

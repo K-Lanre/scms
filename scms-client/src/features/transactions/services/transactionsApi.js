@@ -23,13 +23,18 @@ export const withdraw = async ({ accountId, amount, description }) => {
     return data.data;
 };
 
-export const transfer = async ({ fromAccountId, toAccountId, amount, description }) => {
+export const transfer = async ({ fromAccountId, toAccountNumber, amount, description }) => {
     const { data } = await api.post('/transactions/transfer', {
         fromAccountId,
-        toAccountId,
+        toAccountNumber,
         amount,
         description,
     });
+    return data.data;
+};
+
+export const findAccountByNumber = async (accountNumber) => {
+    const { data } = await api.get(`/transactions/find-account/${accountNumber}`);
     return data.data;
 };
 

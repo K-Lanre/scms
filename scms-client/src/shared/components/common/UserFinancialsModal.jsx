@@ -14,7 +14,7 @@ import {
   FiCheckCircle,
   FiAlertCircle,
 } from "react-icons/fi";
-import { useUserFinancials } from "../../../features/admin/hooks/useAdmin";
+import { useUserFinancials } from "../../../features/members/hooks/useMembers";
 import api from "../../../lib/api";
 import BaseModal from "./BaseModal";
 

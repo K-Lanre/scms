@@ -101,7 +101,8 @@ exports.submitOnboarding = catchAsync(async (req, res, next) => {
         'phoneNumber', 'address', 'state', 'lga',
         'dateOfBirth', 'nextOfKinName', 'nextOfKinPhone', 'nextOfKinRelationship',
         'idType', 'idNumber', 'idImage', 'profilePicture',
-        'occupation', 'employer', 'nokName', 'nokPhone', 'gender'
+        'occupation', 'employer', 'nokName', 'nokPhone', 'gender',
+        'bankName', 'bankCode', 'accountNumber'
     );
 
     // 2) Update user document and change status
@@ -120,6 +121,9 @@ exports.submitOnboarding = catchAsync(async (req, res, next) => {
         nextOfKinPhone: req.body.nokPhone || req.body.nextOfKinPhone,
         nextOfKinRelationship: req.body.nokRelationship || req.body.nextOfKinRelationship,
         idNumber: req.body.idNumber || req.body.idNumber,
+        bankName: req.body.bankName,
+        bankCode: req.body.bankCode,
+        accountNumber: req.body.accountNumber,
         idImage: req.files?.idImage ? req.files.idImage[0].filename : undefined,
         profilePicture: req.files?.profilePicture ? req.files.profilePicture[0].filename : undefined,
         status: 'pending_approval'
@@ -200,12 +204,20 @@ exports.approveMember = catchAsync(async (req, res, next) => {
     }
 
     if (user.role === 'member' || user.role === 'staff' || user.role === 'super_admin') {
-        return next(new AppError('User is already a member or admin', 400));
+        if (user.status === 'active') {
+            return next(new AppError('User is already an active member or admin', 400));
+        }
+    }
+
+    // Allow approval for pending_approval OR rejected users
+    if (user.status !== 'pending_approval' && user.status !== 'rejected') {
+        return next(new AppError('Only users pending approval or previously rejected can be approved', 400));
     }
 
     // 1. Update Role to 'member' and Status to 'active'
     user.role = 'member';
     user.status = 'active';
+    user.rejectionReason = null; // Clear rejection reason if any
 
     // 2. Create Paystack Customer
     try {
@@ -365,7 +377,8 @@ exports.adminUpdateUser = catchAsync(async (req, res, next) => {
         employer,
         maritalStatus,
         gender,
-        membershipType
+        membershipType,
+        bankCode
     } = req.body;
 
     const user = await User.findByPk(req.params.id);
@@ -401,6 +414,7 @@ exports.adminUpdateUser = catchAsync(async (req, res, next) => {
     if (maritalStatus) user.maritalStatus = maritalStatus;
     if (gender) user.gender = gender;
     if (membershipType) user.membershipType = membershipType;
+    if (bankCode) user.bankCode = bankCode;
 
     await user.save({ validate: false });
 
@@ -456,6 +470,20 @@ exports.adminCreateUser = catchAsync(async (req, res, next) => {
         message: 'User created successfully',
         data: {
             user: newUser
+        }
+    });
+});
+exports.getUser = catchAsync(async (req, res, next) => {
+    const user = await User.findByPk(req.params.id);
+
+    if (!user) {
+        return next(new AppError('No user found with that ID', 404));
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            user
         }
     });
 });

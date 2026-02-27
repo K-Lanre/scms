@@ -24,9 +24,15 @@ module.exports = (sequelize, DataTypes) => {
         as: 'loans'
       });
       // User is a guarantor for many loans
-      User.hasMany(models.LoanGuarantor, {
-        foreignKey: 'guarantorUserId',
-        as: 'guarantorRecords'
+      // User has many withdrawal requests
+      User.hasMany(models.WithdrawalRequest, {
+        foreignKey: 'userId',
+        as: 'withdrawalRequests'
+      });
+      // User processes many withdrawal requests
+      User.hasMany(models.WithdrawalRequest, {
+        foreignKey: 'processedBy',
+        as: 'processedWithdrawals'
       });
     }
 
@@ -168,7 +174,15 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    bankCode: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     accountNumber: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    paystackRecipientCode: {
       type: DataTypes.STRING,
       allowNull: true
     }

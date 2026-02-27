@@ -32,9 +32,9 @@ export const rejectLoan = async (id) => {
     return data.data;
 };
 
-export const disburseLoan = async (id) => {
-    const { data } = await api.patch(`/loans/${id}/disburse`);
-    return data.data;
+export const disburseLoan = async (id, data = {}) => {
+    const response = await api.patch(`/loans/${id}/disburse`, data);
+    return response.data.data;
 };
 
 // ─── Repayments ───────────────────────────────────────────────────────────────

@@ -7,9 +7,14 @@ import {
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
+import { getMyAccounts } from "../../accounts/services/accountApi";
+import { requestWithdrawal } from "../services/savingsApi";
 
 const SavingsOperations = () => {
   const [activeTab, setActiveTab] = useState("deposit");
+  const [accounts, setAccounts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const {
     register,
     handleSubmit,
@@ -17,12 +22,45 @@ const SavingsOperations = () => {
     formState: { errors },
   } = useForm();
 
-  const onSubmit = (data) => {
-    console.log(activeTab.toUpperCase(), data);
-    toast.success(
-      `${activeTab === "deposit" ? "Deposit" : "Withdrawal"} request submitted successfully!`,
-    );
-    reset();
+  const fetchAccounts = async () => {
+    try {
+      const data = await getMyAccounts();
+      // Filter for savings related accounts
+      setAccounts(
+        data.filter((a) => ["savings", "savings_plan"].includes(a.accountType)),
+      );
+    } catch (error) {
+      toast.error("Failed to load accounts");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchAccounts();
+  }, []);
+
+  const onSubmit = async (data) => {
+    try {
+      if (activeTab === "withdraw") {
+        // Check if it's a savings plan (needs planId)
+        const selectedAccount = accounts.find((a) => a.id == data.accountId);
+        if (activeTab === "withdraw") {
+          await requestWithdrawal({
+            planId: data.accountId, // This works if accountId is the plan's accountId
+            amount: data.amount,
+          });
+        }
+      }
+      toast.success(
+        `${activeTab === "deposit" ? "Deposit" : "Withdrawal"} request submitted successfully!`,
+      );
+      reset();
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Failed to process operation",
+      );
+    }
   };
 
   return (
@@ -79,12 +117,23 @@ const SavingsOperations = () => {
                 {...register("accountId", {
                   required: "Please select an account",
                 })}
+                disabled={isLoading}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
               >
-                <option value="">-- Choose Savings Account --</option>
-                <option value="1">Regular Savings - ₦250,000.00</option>
-                <option value="2">Target Savings (Xmas) - ₦120,000.00</option>
-                <option value="3">Fixed Deposit - ₦500,000.00</option>
+                <option value="">
+                  {isLoading
+                    ? "Loading accounts..."
+                    : "-- Choose Savings Account --"}
+                </option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.accountType === "savings"
+                      ? "Main Savings"
+                      : "Target Savings"}{" "}
+                    - ₦{parseFloat(acc.balance).toLocaleString()} (
+                    {acc.accountNumber})
+                  </option>
+                ))}
               </select>
               {errors.accountId && (
                 <p className="text-red-500 text-sm mt-1">

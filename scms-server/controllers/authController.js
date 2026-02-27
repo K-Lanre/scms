@@ -5,6 +5,7 @@ const { User } = require('../models');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const Email = require('../utils/email');
+const { logAction } = require('../utils/auditLogger');
 
 const signToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -53,6 +54,7 @@ exports.signup = catchAsync(async (req, res, next) => {
         console.error('Email failed to send:', err);
     }
 
+    logAction(req, 'SIGNUP', { email: newUser.email }, newUser.id);
     createSendToken(newUser, 201, res);
 });
 
@@ -66,9 +68,11 @@ exports.login = catchAsync(async (req, res, next) => {
     const user = await User.findOne({ where: { email } });
 
     if (!user || !(await user.validatePassword(password))) {
+        logAction(req, 'LOGIN_FAILURE', { email });
         return next(new AppError('Incorrect email or password', 401));
     }
 
+    logAction(req, 'LOGIN_SUCCESS', null, user.id);
     createSendToken(user, 200, res);
 });
 

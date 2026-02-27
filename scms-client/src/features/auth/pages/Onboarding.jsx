@@ -47,6 +47,8 @@ const Onboarding = () => {
         "nokRelationship",
       ];
     if (step === 4) fieldsToValidate = ["idType", "idNumber", "idImage"];
+    if (step === 5)
+      fieldsToValidate = ["bankName", "bankCode", "accountNumber"];
 
     const isValidStep = await trigger(fieldsToValidate);
     if (isValidStep) setStep((s) => s + 1);
@@ -103,10 +105,10 @@ const Onboarding = () => {
           <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 -z-10 rounded"></div>
           <div
             className="absolute top-1/2 left-0 h-1 bg-blue-600 -z-10 rounded transition-all duration-300"
-            style={{ width: `${((step - 1) / 3) * 100}%` }}
+            style={{ width: `${((step - 1) / 4) * 100}%` }}
           ></div>
 
-          {[1, 2, 3, 4].map((s) => (
+          {[1, 2, 3, 4, 5].map((s) => (
             <div
               key={s}
               className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors border-4 ${
@@ -459,6 +461,68 @@ const Onboarding = () => {
             </div>
           )}
 
+          {/* Step 5: Bank Details */}
+          {step === 5 && (
+            <div className="space-y-4 animate-in slide-in-from-right fade-in duration-300">
+              <h3 className="font-bold text-xl text-gray-800 border-b pb-2 mb-4 flex items-center">
+                <FiDollarSign className="mr-2 text-blue-600" /> Bank Details
+                (for Payouts)
+              </h3>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bank Name
+                </label>
+                <input
+                  {...register("bankName", {
+                    required: "Bank name is required",
+                  })}
+                  className={`block w-full px-4 py-3 border rounded-lg focus:ring-blue-500 outline-none ${errors.bankName ? "border-red-500" : "border-gray-300"}`}
+                  placeholder="e.g. Zenith Bank"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bank Code
+                  </label>
+                  <input
+                    {...register("bankCode", {
+                      required: "Bank code is required",
+                    })}
+                    className={`block w-full px-4 py-3 border rounded-lg focus:ring-blue-500 outline-none ${errors.bankCode ? "border-red-500" : "border-gray-300"}`}
+                    placeholder="e.g. 057"
+                  />
+                  <p className="mt-1 text-[10px] text-gray-400">
+                    Refer to Paystack bank list for codes.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Account Number
+                  </label>
+                  <input
+                    {...register("accountNumber", {
+                      required: "Account number is required",
+                      pattern: {
+                        value: /^[0-9]{10}$/,
+                        message: "Must be 10 digits",
+                      },
+                    })}
+                    className={`block w-full px-4 py-3 border rounded-lg focus:ring-blue-500 outline-none ${errors.accountNumber ? "border-red-500" : "border-gray-300"}`}
+                    placeholder="10-digit number"
+                  />
+                  {errors.accountNumber && (
+                    <p className="mt-1 text-xs text-red-500">
+                      {errors.accountNumber.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Navigation */}
           <div className="flex justify-between pt-6 border-t border-gray-100">
             {step > 1 ? (
@@ -473,7 +537,7 @@ const Onboarding = () => {
               <div></div>
             )}
 
-            {step < 4 ? (
+            {step < 5 ? (
               <button
                 type="button"
                 onClick={nextStep}

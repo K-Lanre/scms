@@ -95,6 +95,10 @@ module.exports = (sequelize) => {
             foreignKey: 'accountId',
             as: 'transactions'
         });
+        Account.hasMany(models.WithdrawalRequest, {
+            foreignKey: 'accountId',
+            as: 'withdrawalRequests'
+        });
     };
 
     // Instance method to check if withdrawal is allowed

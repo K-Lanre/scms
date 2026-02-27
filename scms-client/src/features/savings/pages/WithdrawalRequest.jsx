@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
   FiDollarSign,
@@ -7,18 +7,65 @@ import {
   FiSend,
   FiCreditCard,
   FiFileText,
+  FiChevronDown,
 } from "react-icons/fi";
+import { requestWithdrawal } from "../services/withdrawalApi";
+import api from "../../../lib/api";
+import toast from "react-hot-toast";
 
 const WithdrawalRequest = () => {
+  const [accounts, setAccounts] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm();
+    reset,
+    watch,
+  } = useForm({
+    defaultValues: {
+      amount: "",
+      purpose: "",
+      narration: "",
+      accountId: "",
+    },
+  });
 
-  const onSubmit = (data) => {
-    console.log(data);
-    alert("Withdrawal request submitted successfully! (Simulation)");
+  const selectedAccountId = watch("accountId");
+  const selectedAccount = accounts.find(
+    (a) => a.id === parseInt(selectedAccountId),
+  );
+
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const { data } = await api.get("/accounts/my-accounts");
+        setAccounts(data.data.accounts);
+        if (data.data.accounts.length > 0) {
+          reset({ accountId: data.data.accounts[0].id.toString() });
+        }
+      } catch (error) {
+        toast.error("Failed to load your accounts");
+      }
+    };
+    fetchAccounts();
+  }, [reset]);
+
+  const onSubmit = async (data) => {
+    setIsLoading(true);
+    try {
+      await requestWithdrawal({
+        accountId: parseInt(data.accountId),
+        amount: parseFloat(data.amount),
+        reason: `${data.purpose}${data.narration ? ": " + data.narration : ""}`,
+      });
+      toast.success("Withdrawal request submitted successfully!");
+      reset({ amount: "", purpose: "", narration: "" });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to submit request");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -33,6 +80,34 @@ const WithdrawalRequest = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="md:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Select Account
+              </label>
+              <div className="relative">
+                <select
+                  {...register("accountId", {
+                    required: "Account is required",
+                  })}
+                  className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all appearance-none"
+                >
+                  <option value="">Select an account</option>
+                  {accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.accountType.replace("_", " ").toUpperCase()} -{" "}
+                      {acc.accountNumber}
+                    </option>
+                  ))}
+                </select>
+                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+              {errors.accountId && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.accountId.message}
+                </p>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
                 Amount to Withdraw (₦)
@@ -50,6 +125,7 @@ const WithdrawalRequest = () => {
                     },
                   })}
                   type="number"
+                  step="0.01"
                   className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
                   placeholder="0.00"
                 />
@@ -70,16 +146,16 @@ const WithdrawalRequest = () => {
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
               >
                 <option value="">Select a reason</option>
-                <option value="emergency">Emergency Fund</option>
-                <option value="business">Business Investment</option>
-                <option value="education">School Fees</option>
-                <option value="other">Other</option>
+                <option value="Emergency Fund">Emergency Fund</option>
+                <option value="Business Investment">Business Investment</option>
+                <option value="School Fees">School Fees</option>
+                <option value="Other">Other</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Payment Narration
+                Additional Note (Optional)
               </label>
               <textarea
                 {...register("narration")}
@@ -100,10 +176,17 @@ const WithdrawalRequest = () => {
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-blue-200"
+              disabled={isLoading}
+              className={`w-full flex items-center justify-center space-x-2 py-4 rounded-xl font-bold transition-all shadow-lg ${
+                isLoading
+                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200"
+              }`}
             >
               <FiSend />
-              <span>Submit Withdrawal Request</span>
+              <span>
+                {isLoading ? "Submitting..." : "Submit Withdrawal Request"}
+              </span>
             </button>
           </form>
         </div>
@@ -117,13 +200,26 @@ const WithdrawalRequest = () => {
               </span>
             </div>
             <div className="mb-2">
-              <span className="text-sm text-slate-400">Total Savings</span>
-              <h2 className="text-3xl font-black">₦250,500.00</h2>
+              <span className="text-sm text-slate-400">
+                {selectedAccount
+                  ? selectedAccount.accountType.replace("_", " ").toUpperCase()
+                  : "Total Balance"}
+              </span>
+              <h2 className="text-3xl font-black">
+                ₦
+                {selectedAccount
+                  ? parseFloat(selectedAccount.balance).toLocaleString()
+                  : "0.00"}
+              </h2>
             </div>
             <div className="pt-4 border-t border-slate-700 mt-4 flex justify-between items-center text-xs">
-              <span className="text-slate-400">Account ID: SM-12345</span>
+              <span className="text-slate-400">
+                {selectedAccount
+                  ? `ID: ${selectedAccount.accountNumber}`
+                  : "---"}
+              </span>
               <span className="px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full font-bold">
-                Active
+                {selectedAccount ? selectedAccount.status.toUpperCase() : "---"}
               </span>
             </div>
           </div>
@@ -140,10 +236,7 @@ const WithdrawalRequest = () => {
               </li>
               <li className="flex items-start text-sm text-slate-600">
                 <FiFileText className="mr-2 mt-1 text-slate-400 flex-shrink-0" />
-                <span>
-                  A flat service fee of ₦50 applies to all successful
-                  withdrawals.
-                </span>
+                <span>Admin approval is required for all withdrawals.</span>
               </li>
             </ul>
           </div>

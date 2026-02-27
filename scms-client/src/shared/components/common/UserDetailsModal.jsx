@@ -10,6 +10,7 @@ import {
   FiFileText,
   FiShield,
   FiCheckCircle,
+  FiXCircle,
   FiClock,
 } from "react-icons/fi";
 import BaseModal from "./BaseModal";
@@ -103,6 +104,17 @@ const UserDetailsModal = ({ user, onClose }) => {
                   {user.status?.replace("_", " ")}
                 </span>
               </div>
+
+              {user.status === "rejected" && user.rejectionReason && (
+                <div className="mt-6 p-4 bg-red-50 rounded-2xl border border-red-100 text-left">
+                  <div className="flex items-center text-red-600 font-bold text-xs uppercase tracking-wider mb-2">
+                    <FiXCircle className="mr-2" /> Rejection Reason
+                  </div>
+                  <p className="text-sm text-red-700 font-medium leading-relaxed italic">
+                    "{user.rejectionReason}"
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* ID info */}

@@ -48,6 +48,11 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
+    planName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Personalized name given to the plan by the user'
+    },
     targetAmount: {
       type: DataTypes.DECIMAL(15, 2),
       allowNull: true,
@@ -90,6 +95,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true,
       comment: 'Last date automated deposit was processed'
+    },
+    withdrawalRequestedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Timestamp when withdrawal was requested (for SafeBox 24h delay)'
     }
   }, {
     sequelize,

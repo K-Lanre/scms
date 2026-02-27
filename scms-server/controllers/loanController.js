@@ -3,6 +3,7 @@ const { recordTransaction } = require('../utils/transactionHelper');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const { formatAmount } = require('../utils/accountHelper');
+const { logAction } = require('../utils/auditLogger');
 
 /**
  * @swagger
@@ -228,6 +229,8 @@ exports.reviewLoan = catchAsync(async (req, res, next) => {
         approvedBy: req.user.id
     });
 
+    logAction(req, `LOAN_${status.toUpperCase()}`, { loanId: loan.id, userId: loan.userId });
+
     res.status(200).json({
         status: 'success',
         data: { loan }
@@ -244,6 +247,8 @@ exports.reviewLoan = catchAsync(async (req, res, next) => {
  *       - bearerAuth: []
  */
 exports.disburseLoan = catchAsync(async (req, res, next) => {
+    const { mode } = req.body; // mode: 'automated' or 'manual'
+
     const loan = await Loan.findByPk(req.params.id, {
         include: [{ model: User, as: 'borrower' }]
     });
@@ -267,28 +272,39 @@ exports.disburseLoan = catchAsync(async (req, res, next) => {
     const t = await sequelize.transaction();
 
     try {
-        // 1. Create Transfer Recipient
-        // Note: In real app, you might map bank names to codes or ask user for code. 
-        // For now, we assume '057' (Zenith) or pass a hardcoded code if testing, or try to lookup.
-        // MOCK: We'll pass a dummy bank code '058' (GTBank) for simplicity if not provided.
-        const bankCode = '058';
+        let transferRef = `MANUAL-${Date.now()}`;
+        let recipientCode = null;
 
-        const recipient = await PaystackService.createTransferRecipient(
-            loan.borrower.name,
-            destAccount,
-            bankCode
-        );
+        if (mode !== 'manual') {
+            // --- Automated Paystack Flow ---
 
-        // 2. Initiate Transfer
-        // Amount in kobo
-        const amountKobo = Math.round(loan.loanAmount * 100);
-        const transfer = await PaystackService.initiateTransfer(
-            amountKobo,
-            recipient.recipient_code,
-            `Loan Disbursement - ${loan.id}`
-        );
+            // Map common bank names to codes if possible, else default
+            const bankNameLower = destBank.toLowerCase();
+            let bankCode = '057'; // Default Zenith
+            if (bankNameLower.includes('gtb') || bankNameLower.includes('guaranty')) bankCode = '058';
+            if (bankNameLower.includes('zenith')) bankCode = '057';
+            if (bankNameLower.includes('access')) bankCode = '044';
+            if (bankNameLower.includes('first')) bankCode = '011';
+            if (bankNameLower.includes('union')) bankCode = '032';
 
-        // 3. Update Loan Status
+            const recipient = await PaystackService.createTransferRecipient(
+                loan.borrower.name,
+                destAccount,
+                bankCode
+            );
+
+            const amountKobo = Math.round(loan.loanAmount * 100);
+            const transfer = await PaystackService.initiateTransfer(
+                amountKobo,
+                recipient.recipient_code,
+                `Loan Disbursement - ${loan.id}`
+            );
+
+            transferRef = transfer.reference;
+            recipientCode = recipient.recipient_code;
+        }
+
+        // --- Common Status Update Logic ---
         const disbursedAt = new Date();
         const dueDate = loanCalculator.calculateDueDate(disbursedAt, loan.duration);
 
@@ -298,41 +314,44 @@ exports.disburseLoan = catchAsync(async (req, res, next) => {
             nextPaymentDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
             dueDate,
             originalDueDate: dueDate,
-            paystackTransferRecipient: recipient.recipient_code,
-            disbursementReference: transfer.reference
+            paystackTransferRecipient: recipientCode,
+            disbursementReference: transferRef
         }, { transaction: t });
 
-        // 4. Record Transaction (System record of money leaving)
-        // We credit the user's "Savings" account technically to show the flow? 
-        // Or just log it. Usually, we might debit the Organization's account. 
-        // For SCMS logic, let's just record it as a 'loan_disbursement' which doesn't necessarily hit the user's savings balance 
-        // BUT if we want to show it in their history, we can record it.
-        // Let's stick to recording it but NOT crediting their internal savings balance, 
-        // because we sent the money OUT to their real bank.
-        // So we just create a transaction record for history.
+        // Find primary account for record keeping
+        const account = await Account.findOne({
+            where: { userId: loan.userId, accountType: 'savings' }
+        });
 
+        // Record Transaction
         await Transaction.create({
-            accountId: null, // External transaction
+            accountId: account ? account.id : null,
             userId: loan.userId,
             transactionType: 'loan_disbursement',
             amount: loan.loanAmount,
-            balanceAfter: 0, // Not applicable
+            balanceAfter: 0,
             status: 'completed',
-            reference: transfer.reference,
-            description: `Loan disbursement to ${destBank} (${destAccount})`,
+            reference: transferRef,
+            description: `Loan disbursement (${mode || 'automated'}) to ${destBank} (${destAccount})`,
             performedBy: req.user.id,
             transactionDate: new Date()
         }, { transaction: t });
 
-
         await t.commit();
+
+        logAction(req, 'LOAN_DISBURSEMENT', {
+            loanId: loan.id,
+            mode,
+            amount: loan.loanAmount,
+            reference: transferRef
+        });
 
         res.status(200).json({
             status: 'success',
-            message: 'Loan disbursed successfully to external account',
+            message: `Loan disbursed successfully via ${mode || 'automated'} mode`,
             data: {
-                reference: transfer.reference,
-                recipient: recipient.recipient_code
+                reference: transferRef,
+                recipient: recipientCode
             }
         });
     } catch (error) {

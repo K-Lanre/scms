@@ -1,18 +1,324 @@
-import React from "react";
-import { useParams } from "react-router-dom";
+import React, { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  FiUser,
+  FiMail,
+  FiPhone,
+  FiShield,
+  FiCreditCard,
+  FiCalendar,
+  FiBriefcase,
+  FiMapPin,
+  FiArrowLeft,
+  FiEdit,
+  FiActivity,
+  FiDollarSign,
+  FiTrendingUp,
+  FiXCircle,
+} from "react-icons/fi";
+import { useMemberProfile, useUserFinancials } from "../hooks/useMembers";
+import UserEditModal from "../../../shared/components/common/UserEditModal";
 
 const MemberProfile = () => {
   const { id } = useParams();
-  return (
-    <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
-      <h1 className="text-2xl font-bold text-gray-800 mb-4">Member Profile</h1>
-      <p className="text-gray-600">
-        Viewing details for member ID:{" "}
-        <span className="font-semibold text-blue-600">{id}</span>
-      </p>
-      <div className="mt-8 p-8 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center text-gray-400">
-        Member Profile Content Placeholder
+  const navigate = useNavigate();
+  const { data: member, isLoading: profileLoading } = useMemberProfile(id);
+  const { data: financials, isLoading: financialsLoading } =
+    useUserFinancials(id);
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  if (profileLoading || financialsLoading) {
+    return (
+      <div className="flex items-center justify-center p-20">
+        <div className="text-blue-600 animate-spin">
+          <FiActivity size={48} />
+        </div>
       </div>
+    );
+  }
+
+  if (!member) {
+    return (
+      <div className="p-10 text-center">
+        <h2 className="text-2xl font-bold text-gray-800">Member Not Found</h2>
+        <button
+          onClick={() => navigate("/admin/users")}
+          className="mt-4 text-blue-600 hover:underline flex items-center justify-center mx-auto"
+        >
+          <FiArrowLeft className="mr-2" /> Back to Directory
+        </button>
+      </div>
+    );
+  }
+
+  const StatCard = ({ label, value, icon: Icon, colorClass }) => (
+    <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center space-x-4">
+      <div className={`p-3 rounded-2xl ${colorClass}`}>
+        <Icon size={24} />
+      </div>
+      <div>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+          {label}
+        </p>
+        <p className="text-xl font-black text-gray-900">{value}</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate("/admin/users")}
+            className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-blue-600 hover:border-blue-100 transition-all"
+          >
+            <FiArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">
+              Member Profile
+            </h1>
+            <p className="text-gray-500 font-medium">
+              ID: <span className="text-blue-600">{id}</span>
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setIsEditModalOpen(true)}
+          className="flex items-center justify-center space-x-2 bg-gray-900 text-white px-6 py-3 rounded-2xl font-bold hover:bg-gray-800 transition-all shadow-lg"
+        >
+          <FiEdit />
+          <span>Edit Details</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Profile Info Sidebar */}
+        <div className="lg:col-span-4 space-y-8">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm text-center relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-blue-600 to-indigo-700 opacity-10"></div>
+            <div className="relative w-32 h-32 mx-auto mb-6">
+              <div className="w-full h-full rounded-full bg-white p-1 ring-4 ring-blue-50 overflow-hidden shadow-inner">
+                {member.profilePicture ? (
+                  <img
+                    src={`${import.meta.env.VITE_API_URL}/img/users/${member.profilePicture}`}
+                    alt=""
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-blue-200 bg-blue-50/50">
+                    <FiUser size={64} />
+                  </div>
+                )}
+              </div>
+              <div
+                className={`absolute bottom-1 right-1 w-6 h-6 rounded-full border-4 border-white ${member.status === "active" ? "bg-green-500" : "bg-amber-500"}`}
+              ></div>
+            </div>
+            <h2 className="text-2xl font-black text-gray-900 mb-1">
+              {member.name}
+            </h2>
+            <p className="text-gray-500 font-medium mb-6">{member.email}</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <span className="px-4 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-widest border border-blue-100">
+                {member.membershipType || "REGULAR"}
+              </span>
+              <span className="px-4 py-1.5 rounded-full bg-green-50 text-green-700 text-xs font-bold uppercase tracking-widest border border-green-100">
+                {member.status}
+              </span>
+            </div>
+
+            {member.status === "rejected" && member.rejectionReason && (
+              <div className="mt-6 p-4 bg-red-50 rounded-2xl border border-red-100 text-left">
+                <div className="flex items-center text-red-600 font-bold text-xs uppercase tracking-wider mb-2">
+                  <FiXCircle className="mr-2" /> Rejection Reason
+                </div>
+                <p className="text-sm text-red-700 font-medium leading-relaxed italic">
+                  "{member.rejectionReason}"
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
+            <h3 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em] border-b pb-4">
+              Quick Contact
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 text-gray-600">
+                <FiMail size={18} className="text-blue-500" />
+                <span className="text-sm font-semibold">{member.email}</span>
+              </div>
+              <div className="flex items-center space-x-3 text-gray-600">
+                <FiPhone size={18} className="text-blue-500" />
+                <span className="text-sm font-semibold">
+                  {member.phoneNumber || "No Phone"}
+                </span>
+              </div>
+              <div className="flex items-center space-x-3 text-gray-600">
+                <FiMapPin size={18} className="text-blue-500" />
+                <span className="text-sm font-semibold leading-relaxed">
+                  {member.address || "No Address Provided"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Financial & Detailed Info Section */}
+        <div className="lg:col-span-8 space-y-8">
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatCard
+              label="Savings"
+              value={`₦${Number(financials?.accounts?.find((a) => a.accountType === "savings")?.balance || 0).toLocaleString()}`}
+              icon={FiDollarSign}
+              colorClass="bg-green-50 text-green-600"
+            />
+            <StatCard
+              label="Loans"
+              value={`₦${Number(financials?.loans?.reduce((sum, loan) => sum + Number(loan.outstandingBalance), 0) || 0).toLocaleString()}`}
+              icon={FiTrendingUp}
+              colorClass="bg-red-50 text-red-600"
+            />
+            <StatCard
+              label="Plans"
+              value={financials?.savingsPlans?.length || 0}
+              icon={FiCalendar}
+              colorClass="bg-blue-50 text-blue-600"
+            />
+          </div>
+
+          {/* Detailed Tabs/Sections */}
+          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+            <div className="flex border-b border-gray-50 bg-gray-50/20">
+              <button className="px-8 py-6 text-sm font-black text-blue-600 border-b-4 border-blue-600 uppercase tracking-widest">
+                Identity & Employment
+              </button>
+            </div>
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  ID Type & Number
+                </p>
+                <div className="flex items-center space-x-2 text-gray-800 font-bold">
+                  <FiShield size={16} className="text-gray-300" />
+                  <span>
+                    {member.idType} - {member.idNumber || "N/A"}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Occupation & Employer
+                </p>
+                <div className="flex items-center space-x-2 text-gray-800 font-bold">
+                  <FiBriefcase size={16} className="text-gray-300" />
+                  <span>
+                    {member.occupation || "N/A"} @ {member.employer || "N/A"}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Date of Birth
+                </p>
+                <div className="flex items-center space-x-2 text-gray-800 font-bold">
+                  <FiCalendar size={16} className="text-gray-300" />
+                  <span>
+                    {member.dateOfBirth
+                      ? new Date(member.dateOfBirth).toLocaleDateString()
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Banking Details
+                </p>
+                <div className="flex items-center space-x-2 text-gray-800 font-bold">
+                  <FiCreditCard size={16} className="text-gray-300" />
+                  <span>
+                    {member.bankName} - {member.accountNumber || "N/A"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Accounts & Loans Lists */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-black text-gray-900 mb-6 flex items-center justify-between">
+                <span>Active Accounts</span>
+                <FiCreditCard className="text-blue-500" />
+              </h3>
+              <div className="space-y-4">
+                {financials?.accounts?.map((acc) => (
+                  <div
+                    key={acc.id}
+                    className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100"
+                  >
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        {acc.accountType.replace("_", " ")}
+                      </p>
+                      <p className="text-xs font-mono font-medium text-gray-500">
+                        {acc.accountNumber}
+                      </p>
+                    </div>
+                    <p className="text-base font-black text-gray-900">
+                      ₦{Number(acc.balance).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-black text-gray-900 mb-6 flex items-center justify-between">
+                <span>Recent Loans</span>
+                <FiTrendingUp className="text-red-500" />
+              </h3>
+              <div className="space-y-4">
+                {financials?.loans?.slice(0, 3).map((loan) => (
+                  <div
+                    key={loan.id}
+                    className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100"
+                  >
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        {loan.status}
+                      </p>
+                      <p className="text-xs font-medium text-gray-500">
+                        Total: ₦{Number(loan.loanAmount).toLocaleString()}
+                      </p>
+                    </div>
+                    <p className="text-base font-black text-red-600">
+                      -₦{Number(loan.outstandingBalance).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+                {(!financials?.loans || financials.loans.length === 0) && (
+                  <p className="text-sm text-gray-400 italic text-center py-4">
+                    No loan records
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {isEditModalOpen && (
+        <UserEditModal
+          user={member}
+          onClose={() => setIsEditModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

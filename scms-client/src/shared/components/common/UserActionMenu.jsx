@@ -70,22 +70,26 @@ const UserActionMenu = ({
 
       {isOpen && (
         <div
-          className={`absolute right-0 w-48 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-[100] overflow-hidden divide-y divide-gray-100 ${
+          className={`absolute right-0 w-48 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-[9999] overflow-hidden divide-y divide-gray-100 ${
             menuPosition === "top"
               ? "bottom-full mb-2 origin-bottom-right animate-in slide-in-from-bottom-2 zoom-in-95 duration-200"
               : "top-full mt-2 origin-top-right animate-in slide-in-from-top-2 zoom-in-95 duration-200"
           }`}
         >
           <div className="py-1">
-            {user.status === "pending_approval" && onReviewRegistration && (
-              <button
-                onClick={() => handleAction(onReviewRegistration)}
-                className="group flex items-center w-full px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 font-medium"
-              >
-                <FiEye className="mr-3 h-4 w-4 text-blue-500" />
-                Review Application
-              </button>
-            )}
+            {(user.status === "pending_approval" ||
+              user.status === "rejected") &&
+              onReviewRegistration && (
+                <button
+                  onClick={() => handleAction(onReviewRegistration)}
+                  className="group flex items-center w-full px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 font-medium"
+                >
+                  <FiEye className="mr-3 h-4 w-4 text-blue-500" />
+                  {user.status === "rejected"
+                    ? "Re-review Application"
+                    : "Review Application"}
+                </button>
+              )}
 
             {onViewProfile && user.status !== "pending_approval" && (
               <button
@@ -118,41 +122,43 @@ const UserActionMenu = ({
             )}
           </div>
 
-          <div className="py-1">
-            {onMakeAdmin && user.role !== "super_admin" && (
-              <button
-                onClick={() => handleAction(onMakeAdmin)}
-                className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                <FiShield className="mr-3 h-4 w-4 text-purple-400 group-hover:text-purple-500" />
-                Make Admin
-              </button>
-            )}
-
-            {onMakeStaff &&
-              user.role !== "staff" &&
-              user.role !== "super_admin" && (
+          {user.status === "active" && (
+            <div className="py-1">
+              {onMakeAdmin && user.role !== "super_admin" && (
                 <button
-                  onClick={() => handleAction(onMakeStaff)}
+                  onClick={() => handleAction(onMakeAdmin)}
                   className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
-                  <FiUser className="mr-3 h-4 w-4 text-blue-400 group-hover:text-blue-500" />
-                  Make Staff
+                  <FiShield className="mr-3 h-4 w-4 text-purple-400 group-hover:text-purple-500" />
+                  Make Admin
                 </button>
               )}
 
-            {onMakeMember &&
-              user.role !== "member" &&
-              user.role !== "super_admin" && (
-                <button
-                  onClick={() => handleAction(onMakeMember)}
-                  className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <FiUserCheck className="mr-3 h-4 w-4 text-green-400 group-hover:text-green-500" />
-                  Make Member
-                </button>
-              )}
-          </div>
+              {onMakeStaff &&
+                user.role !== "staff" &&
+                user.role !== "super_admin" && (
+                  <button
+                    onClick={() => handleAction(onMakeStaff)}
+                    className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <FiUser className="mr-3 h-4 w-4 text-blue-400 group-hover:text-blue-500" />
+                    Make Staff
+                  </button>
+                )}
+
+              {onMakeMember &&
+                user.role !== "member" &&
+                user.role !== "super_admin" && (
+                  <button
+                    onClick={() => handleAction(onMakeMember)}
+                    className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <FiUserCheck className="mr-3 h-4 w-4 text-green-400 group-hover:text-green-500" />
+                    Make Member
+                  </button>
+                )}
+            </div>
+          )}
 
           <div className="py-1">
             {user.status === "active" && onSuspend && (
@@ -165,14 +171,16 @@ const UserActionMenu = ({
               </button>
             )}
 
-            {(user.status === "suspended" || user.status === "inactive") &&
+            {(user.status === "suspended" ||
+              user.status === "inactive" ||
+              user.status === "rejected") &&
               onActivate && (
                 <button
                   onClick={() => handleAction(onActivate)}
                   className="group flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-green-50 font-medium"
                 >
                   <FiUserCheck className="mr-3 h-4 w-4 text-green-500" />
-                  Activate Account
+                  {user.status === "rejected" ? "Approve User" : "Activate"}
                 </button>
               )}
           </div>

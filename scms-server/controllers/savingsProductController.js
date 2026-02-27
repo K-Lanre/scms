@@ -1,6 +1,7 @@
 const { SavingsProduct } = require('../models');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
+const { logAction } = require('../utils/auditLogger');
 
 /**
  * @swagger
@@ -45,7 +46,8 @@ const AppError = require('../utils/appError');
  */
 exports.createProduct = catchAsync(async (req, res, next) => {
     const {
-        name, description, type, interestRate, minDuration, maxDuration, penaltyPercentage, allowEarlyWithdrawal
+        name, description, type, interestRate, minDuration, maxDuration, penaltyPercentage, allowEarlyWithdrawal,
+        category, isQuickSaving
     } = req.body;
 
     // Basic validation
@@ -60,9 +62,14 @@ exports.createProduct = catchAsync(async (req, res, next) => {
         interestRate,
         minDuration,
         maxDuration,
+        minDeposit,
         penaltyPercentage,
-        allowEarlyWithdrawal
+        allowEarlyWithdrawal,
+        category: category || 'none',
+        isQuickSaving: isQuickSaving || false
     });
+
+    logAction(req, 'SAVINGS_PRODUCT_CREATED', { productId: product.id, name: product.name });
 
     res.status(201).json({
         status: 'success',
@@ -133,6 +140,8 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
     }
 
     const updatedProduct = await product.update(req.body);
+
+    logAction(req, 'SAVINGS_PRODUCT_UPDATED', { productId: product.id, changes: req.body });
 
     res.status(200).json({
         status: 'success',
