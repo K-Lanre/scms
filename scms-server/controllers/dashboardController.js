@@ -1,4 +1,4 @@
-const { User, Account, Loan, UserSavingsPlan, Transaction, sequelize } = require('../models');
+const { User, Account, Loan, UserSavingsPlan, Transaction, WithdrawalRequest, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const catchAsync = require('../utils/catchAsync');
 
@@ -21,7 +21,7 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
         // 3. Pending Requests (Registrations + Loans + Withdrawals)
         const pendingLoans = await Loan.count({ where: { status: 'pending' } });
         const pendingRegistrations = await User.count({ where: { status: 'pending_approval' } });
-        const pendingWithdrawals = 0; // Placeholder for now
+        const pendingWithdrawals = await WithdrawalRequest.count({ where: { status: 'pending' } });
 
         // 4. Defaulters
         const defaultersCount = await Loan.count({ where: { status: 'defaulted' } });
@@ -42,7 +42,8 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
             where: { userId, accountType: 'savings' }
         });
 
-        const loanAccount = await Loan.findOne({
+        // Use a subquery or join for loan balance to safely handle nulls
+        const loanStats = await Loan.findOne({
             where: { userId, status: { [Op.in]: ['disbursed', 'repaying', 'defaulted'] } },
             attributes: [[sequelize.fn('SUM', sequelize.col('outstandingBalance')), 'total']]
         });
@@ -51,8 +52,14 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
             where: { userId, accountType: 'share_capital' }
         });
 
+        // FIX: Join with Account to filter by userId since Transaction doesn't have userId
         const recentTransactions = await Transaction.findAll({
-            where: { userId },
+            include: [{
+                model: Account,
+                as: 'account',
+                where: { userId },
+                attributes: []
+            }],
             limit: 5,
             order: [['createdAt', 'DESC']]
         });
@@ -61,7 +68,7 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
             status: 'success',
             data: {
                 mySavings: `₦${parseFloat(savingsAccount?.balance || 0).toLocaleString()}`,
-                loanBalance: `₦${parseFloat(loanAccount?.dataValues.total || 0).toLocaleString()}`,
+                loanBalance: `₦${parseFloat(loanStats?.dataValues.total || 0).toLocaleString()}`,
                 shares: `${parseFloat(shareAccount?.balance || 0).toLocaleString()} units`,
                 recentTransactions,
                 role: 'member'
