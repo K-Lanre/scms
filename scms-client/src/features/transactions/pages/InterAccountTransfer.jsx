@@ -13,7 +13,9 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { getMyAccounts } from "../../accounts/services/accountApi";
 import { transfer, findAccountByNumber } from "../services/transactionsApi";
+import { verifyTransactionPin } from "../../../shared/services/securityApi";
 import ConfirmationModal from "../../../shared/components/common/ConfirmationModal";
+import PinModal from "../../../shared/components/common/PinModal";
 import toast from "react-hot-toast";
 
 const InterAccountTransfer = () => {
@@ -38,6 +40,9 @@ const InterAccountTransfer = () => {
   const [recipient, setRecipient] = useState(null);
   const [isValidatingRecipient, setIsValidatingRecipient] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinError, setPinError] = useState("");
+  const [isVerifyingPin, setIsVerifyingPin] = useState(false);
   const [formData, setFormData] = useState(null);
   const [transferMode, setTransferMode] = useState("my_accounts"); // 'my_accounts' or 'others'
 
@@ -126,8 +131,34 @@ const InterAccountTransfer = () => {
     setShowConfirm(true);
   };
 
-  const handleTransfer = async () => {
+  const handleTransferClick = () => {
     setShowConfirm(false);
+    setShowPinModal(true);
+    setPinError("");
+  };
+
+  const handlePinComplete = async (pin) => {
+    setIsVerifyingPin(true);
+    setPinError("");
+    try {
+      await verifyTransactionPin(pin);
+      // If PIN is correct, close modal and execute transfer
+      setShowPinModal(false);
+      await executeTransfer();
+    } catch (error) {
+      if (error.response?.status === 403) {
+        toast.error(error.response.data.message);
+        setShowPinModal(false);
+        // Prompt them to go set their PIN (You could redirect them to a settings page here)
+      } else {
+        setPinError(error.response?.data?.message || "Incorrect PIN");
+      }
+    } finally {
+      setIsVerifyingPin(false);
+    }
+  };
+
+  const executeTransfer = async () => {
     setIsSubmitting(true);
     try {
       await transfer({
@@ -217,7 +248,7 @@ const InterAccountTransfer = () => {
                     ? `Available: ₦${parseFloat(
                         selectedFromAccount.balance,
                       ).toLocaleString()}`
-                    : "Choose source"}
+                    : "Please select an account"}
                 </div>
               </div>
             </div>
@@ -432,16 +463,25 @@ const InterAccountTransfer = () => {
       <ConfirmationModal
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
-        onConfirm={handleTransfer}
+        onConfirm={handleTransferClick}
         title="Confirm Transfer"
         message={`You are about to transfer ₦${parseFloat(
           formData?.amount || 0,
         ).toLocaleString()} to ${recipient?.ownerName} (${
           formData?.toAccount
         }). Proceed?`}
-        confirmLabel="Send Money"
+        confirmLabel="Continue"
         type="info"
-        isLoading={isSubmitting}
+      />
+
+      <PinModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onComplete={handlePinComplete}
+        isLoading={isVerifyingPin || isSubmitting}
+        error={pinError}
+        title="Authorize Transfer"
+        message={`Enter your 4-digit PIN to send ₦${parseFloat(formData?.amount || 0).toLocaleString()} to ${recipient?.ownerName}.`}
       />
     </div>
   );

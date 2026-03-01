@@ -66,6 +66,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         {
           name: "Withdrawal",
           path: "/savings/withdrawal",
+          icon: <FiArrowUpRight />,
+          roles: ["member", "admin", "staff"],
+        },
+        {
+          name: "Fund Account",
+          path: "/accounts/fund",
           icon: <FiPlusCircle />,
           roles: ["member", "admin", "staff"],
         },

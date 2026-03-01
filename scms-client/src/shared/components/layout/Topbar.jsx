@@ -7,14 +7,21 @@ import {
   FiChevronDown,
   FiSettings,
   FiLogOut,
+  FiShield,
 } from "react-icons/fi";
 import { useAuth, useLogout } from "../../../features/auth/hooks/useAuth";
 import { Link } from "react-router-dom";
+import ChangePinModal from "../common/ChangePinModal";
+import { changeTransactionPin } from "../../services/securityApi";
+import toast from "react-hot-toast";
 
 const Topbar = ({ setSidebarOpen, sidebarOpen }) => {
   const { user } = useAuth();
   const { mutate: logout } = useLogout();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showChangePin, setShowChangePin] = useState(false);
+  const [isChangingPin, setIsChangingPin] = useState(false);
+  const [changePinError, setChangePinError] = useState("");
 
   // Mock notifications
   const notifications = [
@@ -113,6 +120,18 @@ const Topbar = ({ setSidebarOpen, sidebarOpen }) => {
                   >
                     <FiUser className="mr-3 h-4 w-4" /> My Profile
                   </Link>
+                  {user?.hasTransactionPin && (
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        setShowChangePin(true);
+                      }}
+                      className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 text-left"
+                    >
+                      <FiShield className="mr-3 h-4 w-4" /> Change Transaction
+                      PIN
+                    </button>
+                  )}
                   <Link
                     to="/profile"
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
@@ -134,6 +153,31 @@ const Topbar = ({ setSidebarOpen, sidebarOpen }) => {
           </div>
         </div>
       </div>
+      {/* Change PIN Modal */}
+      <ChangePinModal
+        isOpen={showChangePin}
+        onClose={() => {
+          setShowChangePin(false);
+          setChangePinError("");
+        }}
+        isLoading={isChangingPin}
+        error={changePinError}
+        onComplete={async (oldPin, newPin) => {
+          setIsChangingPin(true);
+          setChangePinError("");
+          try {
+            await changeTransactionPin(oldPin, newPin);
+            toast.success("Transaction PIN updated successfully!");
+            setShowChangePin(false);
+          } catch (error) {
+            setChangePinError(
+              error.response?.data?.message || "Failed to update PIN",
+            );
+          } finally {
+            setIsChangingPin(false);
+          }
+        }}
+      />
     </header>
   );
 };

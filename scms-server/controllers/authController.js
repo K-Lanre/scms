@@ -16,12 +16,15 @@ const signToken = (id) => {
 const createSendToken = (user, statusCode, res) => {
     const token = signToken(user.id);
     user.password = undefined; // Hide password in response
+    const userResponse = user.toJSON();
+    userResponse.hasTransactionPin = !!user.transactionPin;
+    userResponse.transactionPin = undefined; // Never send actual pin (even hashed)
 
     res.status(statusCode).json({
         status: 'success',
         token,
         data: {
-            user
+            user: userResponse
         }
     });
 };
@@ -157,10 +160,15 @@ exports.profile = catchAsync(async (req, res, next) => {
     if (!user) {
         return next(new AppError('User not found', 404));
     }
+
+    const userResponse = user.toJSON();
+    userResponse.hasTransactionPin = !!user.transactionPin;
+    userResponse.transactionPin = undefined;
+
     res.status(200).json({
         status: 'success',
         data: {
-            user
+            user: userResponse
         }
     });
 });

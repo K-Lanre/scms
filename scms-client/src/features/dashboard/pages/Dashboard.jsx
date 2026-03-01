@@ -25,12 +25,18 @@ import {
 import { useAuth } from "../../auth/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { getDashboardStats, getChartData } from "../services/dashboardApi";
+import { setTransactionPin } from "../../../shared/services/securityApi";
+import PinModal from "../../../shared/components/common/PinModal";
+import toast from "react-hot-toast";
 
 const Dashboard = () => {
   const { user, role } = useAuth();
   const [statsData, setStatsData] = React.useState(null);
   const [chartData, setChartData] = React.useState([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [showPinSetup, setShowPinSetup] = React.useState(false);
+  const [isSettingPin, setIsSettingPin] = React.useState(false);
+  const [isPinSetLocal, setIsPinSetLocal] = React.useState(false);
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -144,6 +150,35 @@ const Dashboard = () => {
           </span>
         </div>
       </div>
+
+      {/* PIN Setup Prompt */}
+      {role === "member" &&
+        user &&
+        user.hasTransactionPin === false &&
+        !isPinSetLocal && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between shadow-sm">
+            <div className="flex items-start md:items-center space-x-4 mb-4 md:mb-0">
+              <div className="p-3 bg-orange-100 text-orange-600 rounded-full">
+                <FiAlertCircle className="text-xl" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Action Required: Set Your Transaction PIN
+                </h3>
+                <p className="text-sm text-gray-600 mt-1 max-w-lg">
+                  To protect your funds, you must set up a 4-digit PIN before
+                  you can make transfers or withdraw savings.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowPinSetup(true)}
+              className="w-full md:w-auto px-6 py-3 bg-orange-600 text-white font-bold rounded-lg shadow-sm hover:bg-orange-700 transition"
+            >
+              Set PIN Now
+            </button>
+          </div>
+        )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -341,6 +376,29 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      {/* PIN Setup Modal */}
+      <PinModal
+        isOpen={showPinSetup}
+        onClose={() => setShowPinSetup(false)}
+        isSetupMode={true}
+        onComplete={async (pin) => {
+          setIsSettingPin(true);
+          try {
+            await setTransactionPin(pin);
+            toast.success("Transaction PIN set successfully!");
+            setShowPinSetup(false);
+            setIsPinSetLocal(true);
+          } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to set PIN");
+          } finally {
+            setIsSettingPin(false);
+          }
+        }}
+        isLoading={isSettingPin}
+        title="Create Transaction PIN"
+        message="Enter a secure 4-digit PIN. You will use this to authorize all future transfers and withdrawals."
+      />
     </div>
   );
 };

@@ -55,6 +55,7 @@ import CollateralRegistry from "./features/loans/pages/CollateralRegistry";
 import FinancialStatements from "./features/reports/pages/FinancialStatements";
 import LandingPage from "./features/landing/pages/LandingPage";
 import SavingsDetails from "./features/savings/pages/SavingsDetails";
+import FundAccount from "./features/accounts/pages/FundAccount";
 import NotFound from "./features/NotFound";
 
 import React, { useEffect } from "react";
@@ -145,6 +146,10 @@ const AppRoutes = () => {
           <Route path="/savings/products" element={<SavingsProducts />} />
           <Route path="/savings/plans/:id" element={<SavingsDetails />} />
           <Route path="/savings/withdrawal" element={<WithdrawalRequest />} />
+
+          {/* Account Routes */}
+          <Route path="/accounts/fund" element={<FundAccount />} />
+          <Route path="/accounts/fund/verify" element={<FundAccount />} />
 
           {/* Loan Routes */}
           <Route path="/loans" element={<LoanApplication />} />

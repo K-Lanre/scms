@@ -39,6 +39,11 @@ module.exports = (sequelize, DataTypes) => {
     async validatePassword(password) {
       return await bcrypt.compare(password, this.password);
     }
+
+    async validatePin(pin) {
+      if (!this.transactionPin) return false;
+      return await bcrypt.compare(pin, this.transactionPin);
+    }
   }
 
   User.init({
@@ -185,6 +190,13 @@ module.exports = (sequelize, DataTypes) => {
     paystackRecipientCode: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    transactionPin: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        len: [4, 60] // Hashed pin will be longer, but input will be 4
+      }
     }
   }, {
     sequelize,
@@ -199,6 +211,10 @@ module.exports = (sequelize, DataTypes) => {
           if (!user.isNewRecord) {
             user.passwordChangedAt = Date.now() - 1000; // Subtract 1s to ensure JWT issued after change is valid
           }
+        }
+
+        if (user.changed('transactionPin') && user.transactionPin) {
+          user.transactionPin = await bcrypt.hash(user.transactionPin, 12);
         }
       }
     }

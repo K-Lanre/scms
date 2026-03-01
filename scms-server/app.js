@@ -15,6 +15,7 @@ const auditRoutes = require('./routes/auditRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const coaRoutes = require('./routes/coaRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 const app = express();
 
 // Middleware
@@ -42,6 +43,8 @@ app.use('/api/v1/audit-logs', auditRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/coa', coaRoutes);
+app.use('/api/v1/security', require('./routes/securityRoutes'));
+app.use('/api/v1/payments', paymentRoutes);
 
 // Webhooks
 app.post('/api/v1/webhooks/paystack', paystackWebhookController.handlePaystackWebhook); // Added this line

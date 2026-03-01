@@ -5,29 +5,36 @@ import {
   FiClock,
   FiCheckCircle,
   FiXCircle,
-  FiEye,
-  FiFilter,
-  FiSearch,
   FiRefreshCw,
+  FiSearch,
+  FiAlertCircle,
 } from "react-icons/fi";
 import {
   getWithdrawalQueue,
   processWithdrawal,
 } from "../../savings/services/withdrawalApi";
 import toast from "react-hot-toast";
-import { useConfirm } from "../../../contexts/ConfirmationContext";
+import BaseModal from "../../../shared/components/common/BaseModal";
+import ConfirmationModal from "../../../shared/components/common/ConfirmationModal";
 
 const WithdrawalQueue = () => {
   const [withdrawals, setWithdrawals] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const confirm = useConfirm();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Rejection modal state
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+
+  // Approval confirmation state
+  const [approveTarget, setApproveTarget] = useState(null);
 
   const fetchQueue = async () => {
     setIsLoading(true);
     try {
       const data = await getWithdrawalQueue();
-      setWithdrawals(data.requests);
+      setWithdrawals(data.requests || []);
     } catch (error) {
       toast.error("Failed to load withdrawal queue");
     } finally {
@@ -39,55 +46,64 @@ const WithdrawalQueue = () => {
     fetchQueue();
   }, []);
 
-  const handleAction = async (id, status) => {
-    let rejectionReason = "";
-
-    if (status === "rejected") {
-      rejectionReason = prompt("Please enter a reason for rejection:");
-      if (!rejectionReason) return;
-    }
-
-    const confirmed = await confirm({
-      title: `${status === "approved" ? "Approve" : "Reject"} Withdrawal`,
-      message: `Are you sure you want to ${status} this withdrawal request?`,
-      confirmText: status === "approved" ? "Approve" : "Reject",
-      type: status === "approved" ? "success" : "danger",
-    });
-
-    if (!confirmed) return;
-
+  const handleApprove = async () => {
+    if (!approveTarget) return;
+    setIsProcessing(true);
     try {
-      await processWithdrawal(id, status, rejectionReason);
-      toast.success(`Withdrawal ${status} successfully`);
+      await processWithdrawal(approveTarget, "approved", "");
+      toast.success("Withdrawal approved successfully");
+      setApproveTarget(null);
       fetchQueue();
     } catch (error) {
       toast.error(
-        error.response?.data?.message || `Failed to ${status} request`,
+        error.response?.data?.message || "Failed to approve withdrawal",
       );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectTarget || !rejectionReason.trim()) {
+      toast.error("Please provide a reason for rejection.");
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      await processWithdrawal(rejectTarget.id, "rejected", rejectionReason);
+      toast.success("Withdrawal rejected");
+      setRejectTarget(null);
+      setRejectionReason("");
+      fetchQueue();
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Failed to reject withdrawal",
+      );
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const filteredWithdrawals = withdrawals.filter(
     (w) =>
-      w.user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      w.account?.accountNumber.includes(searchTerm),
+      w.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      w.account?.accountNumber?.includes(searchTerm),
   );
 
   const pendingCount = withdrawals.filter((w) => w.status === "pending").length;
   const pendingVolume = withdrawals
     .filter((w) => w.status === "pending")
-    .reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
+    .reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Withdrawal Queue</h1>
-          <p className="text-gray-600">
+          <p className="text-gray-500 text-sm mt-1">
             Approve or reject member withdrawal requests.
           </p>
         </div>
-
         <div className="flex space-x-3 mt-4 md:mt-0">
           <div className="relative">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -126,8 +142,12 @@ const WithdrawalQueue = () => {
           </p>
         </div>
         <div className="bg-green-50 border border-green-100 p-4 rounded-xl">
-          <p className="text-green-600 text-sm font-medium">System Liquidity</p>
-          <p className="text-2xl font-bold text-green-900">Healthy</p>
+          <p className="text-green-600 text-sm font-medium">Total Processed</p>
+          <p className="text-2xl font-bold text-green-900">
+            {isLoading
+              ? "..."
+              : withdrawals.filter((w) => w.status !== "pending").length}
+          </p>
         </div>
       </div>
 
@@ -143,7 +163,7 @@ const WithdrawalQueue = () => {
                   Amount
                 </th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Account details
+                  Account
                 </th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Status
@@ -160,14 +180,14 @@ const WithdrawalQueue = () => {
               {filteredWithdrawals.map((req) => (
                 <tr
                   key={req.id}
-                  className="hover:bg-blue-50/30 transition-colors group"
+                  className="hover:bg-blue-50/30 transition-colors"
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3 overflow-hidden">
                         {req.user?.profilePicture ? (
                           <img
-                            src={req.user.profilePicture}
+                            src={`${import.meta.env.VITE_API_URL}/img/users/${req.user.profilePicture}`}
                             alt=""
                             className="w-full h-full object-cover"
                           />
@@ -189,7 +209,7 @@ const WithdrawalQueue = () => {
                     <div className="font-bold text-gray-900">
                       ₦{parseFloat(req.amount).toLocaleString()}
                     </div>
-                    <div className="text-xs text-gray-400 font-medium max-w-[150px] truncate">
+                    <div className="text-xs text-gray-400 max-w-[150px] truncate">
                       {req.reason}
                     </div>
                   </td>
@@ -198,7 +218,7 @@ const WithdrawalQueue = () => {
                       {req.account?.accountNumber}
                     </div>
                     <div className="text-xs text-gray-500 uppercase">
-                      {req.account?.accountType.replace("_", " ")}
+                      {req.account?.accountType?.replace("_", " ")}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -224,14 +244,17 @@ const WithdrawalQueue = () => {
                     {req.status === "pending" ? (
                       <div className="flex items-center justify-center space-x-2">
                         <button
-                          onClick={() => handleAction(req.id, "approved")}
+                          onClick={() => setApproveTarget(req.id)}
                           className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                           title="Approve"
                         >
                           <FiCheckCircle />
                         </button>
                         <button
-                          onClick={() => handleAction(req.id, "rejected")}
+                          onClick={() => {
+                            setRejectTarget(req);
+                            setRejectionReason("");
+                          }}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Reject"
                         >
@@ -266,6 +289,71 @@ const WithdrawalQueue = () => {
           </div>
         )}
       </div>
+
+      {/* Rejection Modal */}
+      <BaseModal
+        isOpen={!!rejectTarget}
+        onClose={() => {
+          setRejectTarget(null);
+          setRejectionReason("");
+        }}
+        title="Reject Withdrawal"
+        icon={FiXCircle}
+        subtitle={
+          rejectTarget
+            ? `Rejecting ₦${parseFloat(rejectTarget.amount).toLocaleString()} from ${rejectTarget.user?.name}`
+            : ""
+        }
+        maxWidthClass="max-w-lg"
+        footer={
+          <div className="flex justify-end space-x-3 w-full">
+            <button
+              onClick={() => {
+                setRejectTarget(null);
+                setRejectionReason("");
+              }}
+              className="px-6 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleReject}
+              disabled={isProcessing || !rejectionReason.trim()}
+              className="px-6 py-2 bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-200 hover:bg-red-700 transition-all text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isProcessing ? "Rejecting..." : "Confirm Rejection"}
+            </button>
+          </div>
+        }
+      >
+        <div className="p-6">
+          <label className="block text-sm font-semibold text-gray-800 mb-2">
+            Reason for Rejection
+          </label>
+          <p className="text-xs text-gray-500 mb-3">
+            This reason will be visible in the system records. Please be clear
+            and professional.
+          </p>
+          <textarea
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            placeholder="e.g., The requested amount exceeds the available balance after pending obligations..."
+            className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-red-500 outline-none text-sm resize-y min-h-[120px]"
+          />
+        </div>
+      </BaseModal>
+
+      {/* Approval Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={!!approveTarget}
+        onClose={() => setApproveTarget(null)}
+        onConfirm={handleApprove}
+        title="Approve Withdrawal"
+        message="Are you sure you want to approve this withdrawal? The funds will be deducted from the member's account and a payout will be initiated if bank details are on file."
+        confirmLabel="Approve Now"
+        type="success"
+        isLoading={isProcessing}
+      />
     </div>
   );
 };

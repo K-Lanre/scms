@@ -19,7 +19,9 @@ import {
 } from "react-icons/fi";
 import { getSavingsPlanById, requestWithdrawal } from "../services/savingsApi";
 import { getTransactionHistory } from "../../transactions/services/transactionsApi";
+import { verifyTransactionPin } from "../../../shared/services/securityApi";
 import ConfirmationModal from "../../../shared/components/common/ConfirmationModal";
+import PinModal from "../../../shared/components/common/PinModal";
 import toast from "react-hot-toast";
 
 const SavingsDetails = () => {
@@ -29,8 +31,13 @@ const SavingsDetails = () => {
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  // Modals state
   const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState({});
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinError, setPinError] = useState("");
+  const [isVerifyingPin, setIsVerifyingPin] = useState(false);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -55,8 +62,33 @@ const SavingsDetails = () => {
     fetchDetails();
   }, [id]);
 
-  const confirmWithdrawal = async () => {
+  const handleConfirmClick = () => {
     setShowWithdrawConfirm(false);
+    setShowPinModal(true);
+    setPinError("");
+  };
+
+  const handlePinComplete = async (pin) => {
+    setIsVerifyingPin(true);
+    setPinError("");
+    try {
+      await verifyTransactionPin(pin);
+      // Valid PIN
+      setShowPinModal(false);
+      await executeWithdrawal();
+    } catch (error) {
+      if (error.response?.status === 403) {
+        toast.error(error.response.data.message);
+        setShowPinModal(false);
+      } else {
+        setPinError(error.response?.data?.message || "Incorrect PIN");
+      }
+    } finally {
+      setIsVerifyingPin(false);
+    }
+  };
+
+  const executeWithdrawal = async () => {
     setIsWithdrawing(true);
     try {
       const response = await requestWithdrawal({ planId: id });
@@ -419,12 +451,23 @@ const SavingsDetails = () => {
       <ConfirmationModal
         isOpen={showWithdrawConfirm}
         onClose={() => setShowWithdrawConfirm(false)}
-        onConfirm={confirmWithdrawal}
+        onConfirm={handleConfirmClick}
         title={confirmConfig.title}
         message={confirmConfig.message}
         confirmLabel={confirmConfig.confirmLabel}
         type={confirmConfig.type}
-        isLoading={isWithdrawing}
+      />
+
+      <PinModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onComplete={handlePinComplete}
+        isLoading={isVerifyingPin || isWithdrawing}
+        error={pinError}
+        title="Authorize Withdrawal"
+        message={`Enter your 4-digit PIN to authorize the withdrawal of ₦${parseFloat(
+          plan.account?.balance || 0,
+        ).toLocaleString()} from your ${plan.product?.name || "Savings"}.`}
       />
     </div>
   );
